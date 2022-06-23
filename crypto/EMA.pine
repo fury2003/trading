@@ -1,0 +1,25 @@
+//@version=4
+study("MTF EMA" , overlay=true)
+isActiveMA1           = input(true,  "MA1", group="Display Setting")
+isActiveMA2           = input(true,  "MA2", group="Display Setting")
+isActiveMA3           = input(true,  "MA3", group="Display Setting")
+isActiveMA4           = input(false,  "MA4", group="Display Setting")
+
+useCurrentRes         = input(true, title="Use Current Chart Resolution?", group="Timeframe Setting")
+resCustom                   = input("240",  "► Time frame", type = input.resolution)
+res = useCurrentRes ? timeframe.period : resCustom
+
+ma1_length = input(34, title = "1st EMA Period", group="EMA Setting")
+ma2_length = input(89, title = "2nd EMA Period", group="EMA Setting")
+ma3_length = input(144, title = "3rd EMA Period", group="EMA Setting")
+ma4_length = input(233, title = "4th EMA Period", group="EMA Setting")
+
+ma1 = security(syminfo.tickerid, res, ema(close, ma1_length))
+ma2 = security(syminfo.tickerid, res, ema(close, ma2_length))
+ma3 = security(syminfo.tickerid, res, ema(close, ma3_length))
+ma4 = security(syminfo.tickerid, res, ema(close, ma4_length))
+
+p = plot(isActiveMA1 ? ma1 : na, title="1st EMA", color=color.blue , linewidth=1, offset=0)
+p2 = plot(isActiveMA2 ? ma2 : na, title="2nd EMA", color=color.orange , linewidth=1, offset=0)
+p3 = plot(isActiveMA3 ? ma3 : na, title="3rd EMA", color=color.purple , linewidth=1, offset=0)
+p4 = plot(isActiveMA4 ? ma4 : na, title="4rd EMA", color=color.black , linewidth=1, offset=0)

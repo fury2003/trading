@@ -1,0 +1,96 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// trungnguyen
+
+//@version=4
+study("ADX MACD SAR")
+
+useCurrentRes = input(true, title="Use Current Chart Resolution?", group="Timeframe Setting")
+resCustom     = input("60",  "► Time frame", type = input.resolution, group="Timeframe Setting")
+res = useCurrentRes ? timeframe.period : resCustom
+showLast      = input(title="Show last", type=input.integer, defval=200, group="Common setting")
+
+// MACD
+fast_length   = input(title="Fast Length", type=input.integer, defval=12, group="MACD Setting")
+slow_length   = input(title="Slow Length", type=input.integer, defval=26, group="MACD Setting")
+src           = input(title="Source", type=input.source, defval=close, group="MACD Setting")
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9, group="MACD Setting")
+sma_source    = input(title="Oscillator MA Type", type=input.string, defval="EMA", options=["SMA", "EMA"], group="MACD Setting")
+sma_signal    = input(title="Signal Line MA Type", type=input.string, defval="SMA", options=["SMA", "EMA"], group="MACD Setting")
+
+// ADX DI
+length        = input(title="Length", type=input.integer, defval=17, group="ADX Setting")
+threshold     = input(title="Threshold", type=input.integer, defval=25, group="ADX Setting")
+
+//Calculating Parabolic SAR
+f_PSAR(_res) =>
+    start = input(0.02, group="Parabolic SAR Setting")
+    increment = input(0.02, group="Parabolic SAR Setting")
+    maximum = input(0.2, "Max Value", group="Parabolic SAR Setting")
+    _sarUp = security(syminfo.tickerid, _res, sar(start, increment, maximum))
+    _sarDown = security(syminfo.tickerid, _res, sar(start, increment, maximum))
+    [_sarUp, _sarDown]
+
+[sarUp, sarDown] = f_PSAR(res)
+
+colUp = close >= sarDown ? color.lime : na
+colDown = close <= sarUp ? color.red : na
+showUp = close >= sarDown ? 1 : 0
+showDown = close <= sarUp ? 1 : 0
+
+// Calculating ADX DMI
+TrueRange = max(max(high-low, abs(high-nz(close[1]))), abs(low-nz(close[1])))
+DirectionalMovementPlus = high-nz(high[1]) > nz(low[1])-low ? max(high-nz(high[1]), 0): 0
+DirectionalMovementMinus = nz(low[1])-low > high-nz(high[1]) ? max(nz(low[1])-low, 0): 0
+
+SmoothedTrueRange = 0.0
+SmoothedTrueRange := nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1])/length) + TrueRange
+
+SmoothedDirectionalMovementPlus = 0.0
+SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - (nz(SmoothedDirectionalMovementPlus[1])/length) + DirectionalMovementPlus
+
+SmoothedDirectionalMovementMinus = 0.0
+SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1])/length) + DirectionalMovementMinus
+
+DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+DX = abs(DIPlus-DIMinus) / (DIPlus+DIMinus)*100
+ADX = sma(DX, length)
+
+// Calculating MACD
+f_timeFrameResolutionInMinutes(_res, val) =>
+    security(syminfo.tickerid, _res, val)
+
+fast_ma = sma_source == "SMA" ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? sma(macd, signal_length) : ema(macd, signal_length)
+
+outMacD = f_timeFrameResolutionInMinutes(res, macd)
+outSignal = f_timeFrameResolutionInMinutes(res, signal)
+macd_IsAbove = outMacD >= outSignal
+macd_color = macd_IsAbove ? color.lime : color.red
+circleYPosition = outSignal
+
+// show ADX DMI
+up = crossover(DIPlus,DIMinus) 
+down = crossunder(DIPlus,DIMinus) 
+bgcolor(up?color.green:na, title="Break Up Background", show_last=showLast)
+bgcolor(down?color.red:na, title="Break Down Background", show_last=showLast)
+
+doubleUp = crossover(ADX,threshold) and crossover(DIPlus,DIMinus) 
+doubleDown = crossover(ADX,threshold) and crossunder(DIPlus,DIMinus) 
+plot(doubleUp ? threshold : na, style=plot.style_cross, color=color.lime, linewidth=3, show_last=showLast)
+plot(doubleDown ? threshold : na, style=plot.style_cross, color=color.maroon, linewidth=3, show_last=showLast)
+
+plot(DIPlus, color=color.green, title="DI+")
+plot(DIMinus, color=color.red, title="DI-")
+plot(ADX, color=color.navy, title="ADX")
+hline(threshold, color=color.black)
+hline(50, color=color.blue)
+
+// show MACD
+plot(cross(outMacD, outSignal) ? threshold : na, title="Cross", style=plot.style_cross, linewidth=4, color=macd_color, show_last=showLast, offset=-3)
+
+// show SAR
+plot(sarUp and showUp>showUp[1]? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colUp, show_last=showLast)
+plot(sarDown and showDown>showDown[1] ? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colDown, show_last=showLast)
