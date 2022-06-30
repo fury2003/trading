@@ -1,0 +1,356 @@
+//@version=4
+study(title = "Stock - VPA + Ichimoku Signal", overlay = true)
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+showaosenbreak        = input(true, "Show Aosen Breakout Strategy", tooltip="Aosen Breakout", group="Ichimoku Signals")
+showkumobreak         = input(true, "Show Kumo Breakout Strategy", tooltip="Kumo Breakout", group="Ichimoku Signals")
+showchikouopen        = input(true, "Show Chikou Open Space Strategy", tooltip="Chikou Open Space", group="Ichimoku Signals")
+showtkkj              = input(true, "Show Tenkan Kijun Crossing Strategy", tooltip="Tenkan Kijun Cross", group="Ichimoku Signals")
+// res                   = input("D",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+res                   = timeframe.period
+showsc                = input(true, "Show Selling Climax (SC)", tooltip="Selling Climax - End of Current Down Trend.", group="VSA Signals")
+showbc                = input(true, "Show Buying Climax (BC)", tooltip="Buying Climax - End of Current Up Trend.", group="VSA Signals")
+//showtch               = input(true, "Show Trend Change (TC)", tooltip="High volume Downbar after an upmove on high volume indicates weakness.", group="VSA Signals")
+showeu                = input(true, "Show Effort Up (EU)", tooltip="Effort to Move up. Bullish Sign.", group="VSA Signals")
+showed                = input(true, "Show Effort Down (ED)", tooltip="Effort to Move Down. Bearish Sign.", group="VSA Signals")
+showeuf               = input(true, "Show Effort Up Fail (EUF)", tooltip="Effort to Move up Failed. Bearish sign.", group="VSA Signals")
+showedf               = input(true, "Show Effort Down Fail (EDF)", tooltip="Effort to Move Down Failed. Bullish sign.", group="VSA Signals")
+//showut                = input(true, "Show Up Thrusts (UT)", tooltip="An Upthrust Bar. A sign of weakness. High Volume adds weakness.  A down bar after Upthrust adds weakness", group="VSA Signals")
+showsv                = input(true, "Show Stop Volume (SV)", tooltip="Stopping volume. Normally indicates end of bearishness is nearing.", group="VSA Signals")
+
+basePeriods           = input(26, minval=1, title="Base Line Periods", group="Ichimoku Setting")
+conversionPeriods     = input(9, minval=1,  title="Conversion Line Periods", group="Ichimoku Setting")
+laggingSpan2Periods   = input(52, minval=1, title="Lagging Span 2 Length", group="Ichimoku Setting")
+displacement          = input(26, minval=1, title="Displacement", group="Ichimoku Setting")
+allowedDistance       = input(5, minval=1, title="Kijun ATR H4(%)")
+showLast              = input(title="Show last", type=input.integer, defval=1000, group="Display")
+
+// Show Bar
+previousHigh = highest(1)[1] 
+previousLow = lowest(1)[1]
+insideBarUp    = (high <= high[1] and low >= low[1] and close >= open)
+insideBarDown  = (high <= high[1] and low >= low[1] and open >= close) 
+outsideBarUp   = (high>high[1] and low<low[1]  and close>previousHigh)
+outsideBarDown = (high>high[1] and low<low[1] and close<previousLow)
+
+//=========================================================================|
+//                    Basic VSA Definitions                                | 
+//=========================================================================|
+volAvg = sma(volume,40)
+volMean = stdev(volAvg,30)
+volUpBand3 = volAvg + (3*volMean)
+volUpBand2 = volAvg + (2*volMean)
+volUpBand1 = volAvg + (1*volMean)
+volDnBand1 = volAvg -(1*volMean)
+volDnBand2 = volAvg - (2*volMean)
+H = high
+L = low
+V = volume
+C = close
+O = open
+midprice        = (H+L)/2
+spread          = (H-L)
+avgSpread       = sma(spread,40)
+avgSpreadBar    = spread > avgSpread// to be checked
+wideRangeBar    = spread>(1.5*avgSpread)
+narrowRangeBar  = spread<(0.7*avgSpread)
+lowVolume       = V<volume[1] and V<volume[2] and V <volAvg // mods
+upBar           = C>close[1]//C>Ref(C,-1)
+downBar         = C<close[1]//C<Ref(C,-1)
+highVolume      = V>volume[1] and volume[1]>volume[2]// Review
+closeFactor     = C-L
+clsPosition     = spread/closeFactor
+closePosition   = ((closeFactor == 0) ? (avgSpread) : (clsPosition))
+vb              = V>volAvg or V>volume[1]          
+upClose         = C>=((spread*0.7)+L)   // close is above 70% of the Bar
+downClose       = C<=((spread*0.3)+L)   // close is below the 30% of the bar
+aboveClose      = C>((spread*0.5)+L)    // close is between 50% and 70% of the bar
+belowClose      = C<((spread*0.5)+L)    // close is between 50% and 30% of the bar
+midClose        = C>((spread*0.3)+L) and C<((spread*0.7)+L) // close is between 30% and 70% of the bar
+veryLowClose    = closePosition>4       //close is below 25% of the bar
+veryHighClose   = closePosition<1.35    // Close is above 80% of the bar
+ClosePos        = iff(C<=((spread*0.2)+L),1,iff(C<=((spread*0.4)+L),2,iff(C<=((spread*0.6)+L),3,iff(C<=((spread*0.8)+L),4,5))))
+volpos          = iff(V>(volAvg*2),1,iff(V>(volAvg*1.3),2,iff(V>volAvg,3,iff(V<volAvg and (V<volAvg*0.7),4,5))))
+freshGndHi      = high == highest(high,5)?1:0
+freshGndLo      = low  == lowest(low,5)?1:0
+
+//=========================================================================|
+//                    Trend Analysis Module                                | 
+//=========================================================================|
+psmin = input(4,"Short Term Min Periods", input.integer, minval=1, maxval=9, step=1, group ="Trend Analysis")  
+psmax = input(9,"Short Term Max Periods", input.integer, minval=1, maxval=9, step=1,  group ="Trend Analysis")
+
+rshmin = (high - nz(low[psmin])) / (atr(psmin) * sqrt(psmin))
+rshmax = (high - nz(low[psmax])) / (atr(psmax) * sqrt(psmax))
+RWIHi  = max(rshmin,rshmax)
+rslmin = (nz(high[psmin]) - low) / (atr(psmin) * sqrt(psmin))
+rslmax = (nz(high[psmax]) - low) / (atr(psmax) * sqrt(psmax))
+RWILo  = max(rslmin,rslmax)
+
+k      = RWIHi-RWILo
+ground = RWIHi  
+sky    = RWILo  
+
+plmin = input(17,"Long Term Min Periods", type=input.integer, minval=1, maxval=32, step=1) 
+plmax = input(26,"Long Term Max Periods", type=input.integer, minval=1, maxval=64, step=1) 
+
+rlhmin = (high - nz(low[plmin])) / (atr(plmin) * sqrt(plmin))
+rlhmax = (high - nz(low[plmax])) / (atr(plmax) * sqrt(plmax))
+RWILHi  = max(rlhmin,rlhmax)
+rllmin = (nz(high[plmin]) - low) / (atr(plmin) * sqrt(plmin))
+rllmax = (nz(high[plmax]) - low) / (atr(plmax) * sqrt(plmax))
+RWILLo  = max(rllmin,rllmax)
+
+j      = RWILHi-RWILLo
+j2     = RWILHi 
+k2     = RWILLo 
+ja     = crossover(j,1) // The following section check the diffeent condition of the RWi above and below zero
+jb     = crossover(1,j) // In oder to check which trend is doing what
+jc     = crossover(-1,j)
+jd     = crossover(j,-1)
+j2a    = crossover(j2,1)
+j2b    = crossover(1,j2)
+k2a    = crossover(k2,1)
+k2b    = crossover(1,k2)
+//Define the Major, Minor and Immediate trend Status
+upmajoron   = j > 1 and ja[1]
+upmajoroff  = j < 1 and jb[1]
+upminoron   = j2 > 1 and j2a[1]
+upminoroff  = j2 < 1 and j2b[1]
+dnmajoron   = j < -1 and jc[1]
+dnmajoroff  = j > -1 and jd[1]
+dnminoron   = k2 > 1 and k2a[1]
+dnminoroff  = k2 < 1 and k2b[1]
+upmid       = iff(ground > 1, 1,0)
+dnimd       = iff(sky > 1, 1, 0)
+upmajor     = iff(j>1,1,iff(j<(-1),-1,0))
+upminor     = iff(j2>1,1,-1)
+dnminor     = iff(k2>1,1,-1)
+
+//=========================================================================|
+//                    VSA SIGNAL GENERATION                                |
+//=========================================================================|
+upThrustBar     = wideRangeBar and downClose  and high > high[1] and upmid==1 //WRB and UHS in midterm trend
+upThrustBartrue = wideRangeBar and ClosePos==1 and upmajor>0 and H>H[1] and volpos < 4 //occurs after a major uptrend
+upThrustCond1   = upThrustBar[1] and downBar and not narrowRangeBar // The Bar after Upthrust Bar- Confirms weakness
+upThrustCond2   = upThrustBar[1] and downBar and V>(volAvg*1.3) // The Bar after Upthrust Bar- Confirms weakness
+upThrustCond3   = upThrustBar and V>(volAvg*2) // Review
+strengthDown    = volpos<4 and downBar[1] and upBar and ClosePos>3 and upmid<=00 and upminor<0     // Strength after a down trend
+strengthDown0   = upmajor<0 and volpos < 4 and downBar[1] and upBar and ClosePos>3 and upminor <0 and upmid <=0
+strengthDown1   = upmajor<0 and V>(volAvg*1.5) and downBar[1] and upBar and  ClosePos>3 and upmid<=00 and upminor<0
+strengthDown2   = upmid<=0 and V[1]<volAvg  and upBar and veryHighClose and volpos<4
+PseudoUpThrust  = (upBar[1])and H>H[1] and V[1]>1.5*volAvg and downBar and downClose and not upThrustBar
+effortUp        = H>H[1] and L>L[1] and C>C[1] and C>=((H-L)*0.7+L) and spread>avgSpread and volpos < 4 
+effortUpfail    = effortUp[1] and (upThrustBar or upThrustCond1 or upThrustCond2 or upThrustCond3 or (downBar and avgSpreadBar))
+effortDown      = H<H[1] and L<L[1] and C<C[1] and C<=((H-L)*0.25+L) and wideRangeBar and V>V[1] 
+buyCond1        = strengthDown or strengthDown1
+buyCond         = upBar and buyCond1[1]
+revUpThrust     = upBar and upClose and V>V[1] and V>volAvg and  wideRangeBar and downBar[1] and downClose[1] and upminor<0
+effortDownfail  = effortDown[1] and ((upBar and avgSpreadBar) or revUpThrust or buyCond1)
+nut             = wideRangeBar and downClose  and freshGndHi and highVolume   // NEW SIGNAL - Upthrust after new short up move
+sellCond1       = (upThrustCond1 or upThrustCond2 or upThrustCond3)
+sellCond2       = sellCond1[1]==0
+sellCond        = sellCond1 and sellCond2
+stopVolume      = L==lowest(L,5)  and (upClose or midClose) and V>1.5*volAvg and upmajor<0
+
+//ST
+ST1 = strengthDown0
+ST2 = strengthDown and not strengthDown2
+strcond = (strengthDown2 and not strengthDown0 and not strengthDown and not strengthDown1)? 1:0
+ST3 = strengthDown1
+ST4 = strengthDown2 and strcond
+ST5 = strengthDown2 and not strcond
+ST  = ST1 or ST2 or ST3 or ST4 or ST5
+
+//UT 
+UT1 = upThrustBar or upThrustBartrue
+UT2 = upThrustCond1 or upThrustCond2
+UT = UT1 or UT2
+
+//=========================================================================|
+//                    ICHIMOKU SIGNAL GENERATION                           |
+//=========================================================================|
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+sspanA = avg(conversionLine, baseLine)
+sspanB = donchian(laggingSpan2Periods)
+leadingsspanA = sspanA[(displacement-1)*2]
+leadingsspanB = sspanB[(displacement-1)*2]
+maxC = max(leadingsspanA,leadingsspanB)
+minC = min(leadingsspanA,leadingsspanB)
+laggingSpan = close[0]
+
+// ————— Returns average value between lowest and highest
+f_avgLH(_len) => avg(lowest(_len), highest(_len))
+f_avgLH_Offset(_len) => avg(lowest(_len-1), highest(_len-1))
+// ————— Returns f_donchian data 
+f_donchian(_tf, _src) => security(syminfo.tickerid, _tf, _src, barmerge.gaps_off, barmerge.lookahead_on)
+// ————— Converts current "timeframe.multiplier" plus the TF into minutes of type float.
+f_resolutionInMinutes() => 
+   timeframe.multiplier * (
+	 timeframe.isseconds ? 1. / 60. :
+	 timeframe.isminutes ? 1.       :
+	 timeframe.isdaily   ? 1440.    :
+	 timeframe.isweekly  ? 10080.   :
+	 timeframe.ismonthly ? 43800.   : na)
+// ————— Returns resolution of _resolution period in minutes.
+f_timeFrameResolutionInMinutes(_res) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    security(syminfo.tickerid, _res, f_resolutionInMinutes())
+// ————— Returns ichimoku data
+f_ichimokuData(_tf) =>
+	_isShow = f_timeFrameResolutionInMinutes(_tf) >= f_resolutionInMinutes()
+    _Tenkan = _isShow ? f_donchian(_tf, f_avgLH(conversionPeriods)) : na
+	_Kijun = _isShow ? f_donchian(_tf, f_avgLH(basePeriods)) : na
+    _SSA = _isShow ? avg(_Tenkan, _Kijun) : na
+	_SSB = _isShow ? f_donchian(_tf, f_avgLH(laggingSpan2Periods)) : na
+    _maxAosen      = _isShow ? max(_Tenkan[displacement - 1],_Kijun[displacement - 1]) : na
+    _minAosen      = _isShow ? min(_Tenkan[displacement - 1],_Kijun[displacement - 1]) : na
+	[_Tenkan, _Kijun, _SSA, _SSB, _maxAosen, _minAosen]
+
+f_ichimokuData_Offset(_tf) =>
+	_isShow = f_timeFrameResolutionInMinutes(_tf) >= f_resolutionInMinutes()
+    _Tenkan = _isShow ? f_donchian(_tf, f_avgLH_Offset(conversionPeriods)) : na
+	_Kijun = _isShow ? f_donchian(_tf, f_avgLH_Offset(basePeriods)) : na
+	[_Tenkan, _Kijun]
+
+[firstTenkan, firstKijun, firstSSA, firstSSB, firstMaxAosen, firstMinAosen] = f_ichimokuData(res)
+[firstTenkanOffset, firstKijunOffset] = f_ichimokuData_Offset(res)
+
+
+// kumo twist
+twistUp = crossover(sspanA, sspanB)
+twistDown = crossunder(sspanA, sspanB)
+// -----------------Aosen -----------------------
+aosenUp = crossover(close,firstMaxAosen) and (avgSpreadBar or upClose) and close>high[1]
+aosenDown = crossunder(close,firstMinAosen) and (avgSpreadBar or downClose) and close<low[1]
+
+// -----------------Kumo-----------------------
+leadSSA = sspanA[displacement - 1]
+leadSSB = sspanB[displacement - 1]
+green_candle = close > open
+red_candle = close < open
+bool breakup = na
+bool breakdown = na
+maxPresentSS = max(leadSSA,leadSSB)
+minPresentSS = min(leadSSA,leadSSB)
+crossup = crossover(close, maxPresentSS)
+if green_candle
+    breakup := crossup
+crossdown = crossunder(close, minPresentSS)
+if red_candle
+    breakdown := crossdown
+
+bool buyKumo = na
+if breakup and close>high[1]
+    buyKumo := avgSpreadBar or upClose 
+bool sellKumo = na
+if breakdown and close<low[1]
+    sellKumo := avgSpreadBar or downClose 
+
+// -----------------Chikou-----------------------
+maxSS     = max(leadSSA[25],leadSSB[25])
+minSS     = min(leadSSA[25],leadSSB[25])
+// Buying Climax
+bc = wideRangeBar and aboveClose and volume == highest(V,80) and upmajor==1// Buying Climax
+// Selling Climax
+sc = wideRangeBar and belowClose and V == highest(V,60) and upmajor== -1 // Selling Climax
+//Stopping volume
+
+// Chikou Trends
+aboveCloud = close[25]>maxSS // Above Cloud
+belowCloud = close[25]<minSS // Below Cloud
+notrend    = maxSS>=close[25] and close[25]>=minSS //choppy trading - the price is in Cloud
+
+// Chikou Lost Home
+chikouOpenUp   = crossover(close,maxSS) and close>close[25] and close>high[1]
+chikouOpenDown = crossunder(close,minSS) and close<close[25] and close<low[1]
+bool chikouLostBuy = na
+ckPlusSellVPA = stopVolume or sc
+if close<close[displacement-1] and ckPlusSellVPA and close<firstKijun
+    chikouLostBuy := (close[displacement-1]-close)/close*100>allowedDistance*2
+
+bool chikouLostSell = na
+ckPlusBuyVPA = bc or UT
+if close>close[displacement-1] and ckPlusBuyVPA and close>firstKijun
+    chikouLostSell := (close-close[displacement-1])/close*100>allowedDistance*2
+
+// Tenkan cross Kijun
+// -----------------Tekan cross Kijun-----------------------
+tkCrossOverkj = crossover(firstTenkan,firstKijun) and green_candle and (avgSpreadBar or upClose) and close>high[1]
+tkCrossUnderkj = crossunder(firstTenkan,firstKijun) and red_candle and (avgSpreadBar or downClose) and close<low[1]
+
+//=========================================================================|
+//                    VSA SIGNAL                                           |
+//=========================================================================|
+//Effort to Move up/down Failed
+plotshape(showeuf ? effortUpfail and not UT and not breakup : na, style=shape.circle, location=location.abovebar, color=color.maroon, text="EUF", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showedf ? effortDownfail and ST and not breakdown : na, style=shape.circle, location=location.belowbar, color=color.navy, text="EDF", editable=false, size=size.tiny, show_last=showLast) 
+
+// Effort Up/Down
+effUp = effortUp and not ST and not buyCond and not effortDownfail and not breakup 
+effDown = effortDown and not effortUpfail and not breakdown 
+plotshape(showeu ? effUp : na, style=shape.triangleup, location=location.belowbar, color=color.navy, text="EU", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showed ? effDown : na, style=shape.triangledown, location=location.abovebar, color=color.maroon, text="ED", editable=false, size=size.tiny, show_last=showLast) 
+
+// Buying/Selling Climax, Stopping Volume
+plotshape(showbc ? bc and not UT and not chikouLostSell : na, "BC", style=shape.xcross, location=location.abovebar, color=color.maroon, text="BC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsc ? sc and not ST and not chikouLostBuy : na, "SC", style=shape.xcross, location=location.belowbar, color=color.navy, text="SC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsv ? stopVolume and not ST and not chikouLostBuy: na, "SV", style=shape.xcross, location=location.belowbar, color=color.navy, text="SV", editable=false, size=size.tiny, show_last=10) 
+
+//=========================================================================|
+//                   VSA + ICHIMOKU SIGNAL                                 |
+//=========================================================================|
+// Aosen
+plotshape(showaosenbreak ? aosenUp and not buyKumo and not chikouOpenUp: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="AU", title="Aosen Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak ? aosenDown and not sellKumo and not chikouOpenDown: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="AD", title="Aosen Breakout Downward", show_last=showLast)
+
+//Kumo breakout
+plotshape(showkumobreak ? buyKumo and not effUp and not effortDownfail and not aosenUp and not tkCrossOverkj: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="BU", title="Kumo Breakout Upward", show_last=showLast)
+plotshape(showkumobreak ? sellKumo and not effDown and not effortUpfail and not aosenDown and not tkCrossUnderkj: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="BD", title="Kumo Breakout Downward", show_last=showLast)
+
+// Combine kumo + aosen breakout
+plotshape(showaosenbreak and showkumobreak? aosenUp and buyKumo : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="AKBU", title="Aosen Kumo Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak and showkumobreak ? aosenDown and sellKumo: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="AKBD", title="Aosen Kumo Breakout Downward", show_last=showLast)
+
+// Tenkan Kijun
+plotshape(showtkkj ? tkCrossOverkj and not buyKumo: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="TK", title="Tenkan cross over Kijun", show_last=showLast)
+plotshape(showtkkj ? tkCrossUnderkj and not sellKumo: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="KT", title="Tenkan cross under Kijun", show_last=showLast)
+
+// Combine kumo breakout + tenkan kijun
+plotshape(showtkkj and showkumobreak? tkCrossOverkj and buyKumo : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="TKKU", title="Tenkan Cross Kijun Kumo Breakout Upward", show_last=showLast)
+plotshape(showtkkj and showkumobreak ? tkCrossUnderkj and sellKumo: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="TKKD", title="Kijun Cross Tenkan Kumo Breakout Downward", show_last=showLast)
+
+//Chikou open space 
+plotshape(showchikouopen ? chikouOpenUp and not effortUp and not aosenUp and upClose: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="OU", title="Chikou Open Space", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenDown and not effortDown and not aosenDown and downClose: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="OD", title="Chikou Open Space", show_last=showLast)
+
+//Chikou open space + Effort
+plotshape(showchikouopen ? chikouOpenUp and effortUp : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="EOU", title="Effort Chikou Open Space", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenDown and effDown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="EOD", title="Effort Chikou Open Space", show_last=showLast)
+
+// Combine  aosen breakout + Chikou free
+plotshape(showaosenbreak and showkumobreak? aosenUp and chikouOpenUp : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="ACBU", title="Aosen Chikou Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak and showkumobreak ? aosenDown and chikouOpenDown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="ACBD", title="Aosen Chikou Breakout Downward", show_last=showLast)
+
+//Chikou lost home
+plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.xcross, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
+plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.xcross, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
+
+// Combine chikou open space + kumo breakout
+plotshape(showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)
+plotshape(showchikouopen and showkumobreak ? sellKumo and chikouOpenDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KCBD", title="Ichi 1stKumo/Chikou Breakout Downward", show_last=showLast)
+alertcondition(buyKumo and chikouOpenUp, title="Kumo Breakout and Chikou Open Up")
+alertcondition(sellKumo and chikouOpenDown, title="Kumo Breakout and Chikou Open Down")
+
+// Combine kumo breakout + effort up/down + effort up/down fail 
+plotshape(showeu and showkumobreak ? buyKumo and (effUp or effortDownfail) :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="EKBU", title="Effort Kumo Breakout Upward", show_last=showLast)
+plotshape(showed and showkumobreak ? sellKumo and (effDown or effortUpfail) :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="EKBD", title="Effort Kumo Breakout Downward", show_last=showLast)
+alertcondition(buyKumo and effUp, title="Kumo Breakout and Effort Up")
+alertcondition(sellKumo and effDown, title="Kumo Breakout and Effort Down")
+
+// Exception need more restrict
+// when EOU/EOD OU/OD appear, price must above kumo cloud or at least inside  hbc

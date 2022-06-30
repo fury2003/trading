@@ -1,0 +1,101 @@
+//@version=4
+//main script written by trungnguyen
+study("Stock - RSI Ichimoku")
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+isActiveChikou       = input(true,  title="Show Chikou", group="Display")
+isActiveBreakoutKumo = input(true,  title="Show Breakout Kumo", group="Display")
+isActiveOpenChikou   = input(true,  title="Show Open Chikou", group="Display")
+showLast             = input(title="Show last", type=input.integer, defval=100, group="Display")
+
+len                  = input(21, "RSI Length", minval=1, group="RSI Setting")
+conversionPeriods    = input(9, minval=1, title="Conversion Line Periods", group="Ichimoku Setting")
+basePeriods          = input(26, minval=1, title="Base Line Periods", group="Ichimoku Setting")
+laggingSpan2Periods  = input(52, minval=1, title="Lagging Span 2 Periods", group="Ichimoku Setting")
+displacement         = input(26, minval=1, title="Displacement", group="Ichimoku Setting")
+
+rsi = rsi(close, len)
+t(x) => security( syminfo.tickerid, timeframe.period, rsi(x, len))
+
+o = t(open)
+h = t(high)
+l = t(low)
+c = t(close)
+upper=input(70)
+mid=input(50)
+lower=input(30)
+plot(upper, color=color.blue)
+plot(mid, color=color.silver)
+plot(lower, color=color.blue)
+plotcandle(o, h, l, c, color=o < c ? color.green : color.red)
+
+donchian(len) => avg(lowest(l,len), highest(h,len))
+
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+_maxAosen      =  max(conversionLine[displacement - 1],baseLine[displacement - 1]) 
+_minAosen      =  min(conversionLine[displacement - 1],baseLine[displacement - 1])
+
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+
+a1 = plot(conversionLine, color=color.navy, title="Conversion Line")
+a2 = plot(baseLine, color=color.maroon, title="Base Line")
+fill(a1, a2, color=color.silver)
+
+plot(isActiveChikou?c:na, offset = -displacement+1, color=color.black, title="Lagging Span")
+p1 = plot(leadLine1, offset = displacement-1, color=color.green, title="Lead 1")
+p2 = plot(leadLine2, offset = displacement-1, color=color.red, title="Lead 2")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red)
+
+aosenUp = crossover(c,_maxAosen) and rsi<65
+aosenDown = crossunder(c,_minAosen) and rsi>35
+ 
+leadingsspanA = leadLine1[(26-1)*2]
+leadingsspanB = leadLine2[(26-1)*2]
+leadSSA = leadLine1[26 - 1]
+leadSSB = leadLine2[26 - 1]
+laggingSpan = c[0]
+
+bool breakupFutureRed = na
+bool breakupFutureGreen = na
+bool breakdownFutureGreen = na
+bool breakdownFutureRed = na
+
+green_candle = c > o
+red_candle = c < o
+// -----------------break up cloud-----------------------
+maxSS = max(leadSSA,leadSSB)
+minSS = min(leadSSA,leadSSB)
+bool breakup = na
+bool breakdown = na
+crossup = crossover(c, maxSS)
+if green_candle
+    breakup := crossup
+crossdown = crossunder(c, minSS)
+if red_candle
+    breakdown := crossdown
+
+// kumo breakout strategy
+bullishSSA = breakup and c>baseLine and laggingSpan>c[26] and rsi<=60
+bearishSSB = breakdown and c<baseLine and laggingSpan<c[26] and rsi>=40
+plot(isActiveBreakoutKumo?bullishSSA?lower:na:na, style=plot.style_cross, color=color.green, linewidth=3, show_last=showLast)
+plot(isActiveBreakoutKumo?bearishSSB?upper:na:na, style=plot.style_cross, color=color.red, linewidth=3, show_last=showLast)
+
+// chikou open space strategy
+maxC = max(leadingsspanA,leadingsspanB)
+minC = min(leadingsspanA,leadingsspanB) 
+uptrend   = crossover(laggingSpan,maxC) and laggingSpan>c[26]  and rsi<65
+downtrend = crossunder(laggingSpan,minC) and laggingSpan<c[26] and rsi>35
+
+plot(isActiveOpenChikou?uptrend?laggingSpan:na:na, style=plot.style_circles, color=color.navy, linewidth=3, show_last=showLast)
+plot(isActiveOpenChikou?downtrend?laggingSpan:na:na, style=plot.style_circles, color=color.navy, linewidth=3, show_last=showLast)
+
+//ao sen
+bgcolor(aosenUp?color.green:na, title="Break Up Background", show_last=showLast)
+bgcolor(aosenDown?color.red:na, title="Break Down Background", show_last=showLast)
+
+/////// Alerts /////
+//alertcondition(down,title="down")
+//alertcondition(up,title="up")

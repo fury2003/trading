@@ -1,0 +1,334 @@
+//@version=4
+study("Stock - MTF Ichimoku Line", overlay=true)
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+C00 = "Original", C01 = "Aqua", C02 = "Black", C03 = "Blue", C04 = "Coral", C05 = "Gold", C06 = "Gray", C07 = "Green", C08 = "Lime", C09 = "Maroon", C10 = "Orange", C11 = "Pink", C12 = "Red", C13 = "Violet", C14 = "Yellow", C15 = "White"
+
+isActiveFirst              = input(true, "──────── First ichimoku ───────", group="Time Frame Configuration")
+firstIchi                  = input("D",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+isActiveSecond             = input(true, "────── Seconde ichimoku ───────", group="Time Frame Configuration")
+secondIchi                 = input("W", "► Time frame", type = input.resolution, group="Time Frame Configuration")
+isActiveThird              = input(true, "─────── Third ichimoku ────────", group="Time Frame Configuration")
+thirdIchi                  = input("M",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+isActiveFirst26            = input(true,  "26 - TF1", group="Show Ichimoku Line")
+isActiveFirst65            = input(false,  "65 - TF1", group="Show Ichimoku Line")
+isActiveFirst129           = input(true,  "129 - TF1", group="Show Ichimoku Line")
+isActiveFirst234           = input(false,  "234 - TF1", group="Show Ichimoku Line")
+isActiveSecond26           = input(true,  "26 - TF2", group="Show Ichimoku Line")
+isActiveSecond65           = input(false,  "65 - TF2", group="Show Ichimoku Line")
+isActiveSecond129          = input(true,  "129 - TF2", group="Show Ichimoku Line")
+isActiveSecond234          = input(false,  "234 - TF2", group="Show Ichimoku Line")
+isActiveThird26            = input(true,  "26 - TF3", group="Show Ichimoku Line")
+isActiveThird65            = input(false,  "65 - TF3", group="Show Ichimoku Line")
+isActiveThird129           = input(false,  "129 - TF3", group="Show Ichimoku Line")
+isActiveThird234           = input(false,  "234 - TF3", group="Show Ichimoku Line")
+conversionPeriods          = input(9, minval=1,  title="Conversion Line Periods", group="Ichimoku Setting"),
+basePeriods                = input(26, minval=1, title="Base Line Periods", group="Ichimoku Setting")
+averagePeriods             = input(65, minval=1, title="65 Length Line Periods", group="Ichimoku Setting")
+lengthPeriods              = input(129, minval=1, title="129 Length Line Periods", group="Ichimoku Setting")
+maxLengthPeriods           = input(234, minval=1, title="234 Length Line Periods", group="Ichimoku Setting")
+isActiveLabel              = input(true,  "Label  ──────────────", group="Color Setting")
+labelOffset                = input(4,     "    ▪ Offset", minval = -20, maxval = 20, group="Color Setting")
+labelColor                 = input(C00,   "    ▪ Color", options = [C00, C01, C02, C03, C04, C05, C06, C07, C08, C09, C10, C11, C12, C13, C14, C15], group="Color Setting")
+isActiveAbbreviation       = input(true,  "  ▪ Abbreviation", group="Color Setting")
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ————————————————————————————————————— CONSTANTS  —————————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+// ————— Ichimoku
+tenkanPeriods=conversionPeriods
+kijunPeriods=basePeriods
+Periods26=basePeriods
+Periods65=averagePeriods
+Periods129=lengthPeriods
+Periods234=maxLengthPeriods
+
+// ————— Styles
+colorVeryLightBlue=#B0B7E6
+colorLightBlue=#8893D9
+colorDarkBlue=#3E4EBD
+colorVeryLightGreen=#9AD6B7
+colorLightGreen=#59BD89
+colorDarkGreen=#327E56
+colorVeryLightOrange=#F5D8A0
+colorLightOrange=#EEB448
+colorDarkOrange=#EB8412
+colorVeryLightPink=#E1AEF0
+colorLightPink=#CF83E9
+colorDarkPink=#B949DE
+transp=80
+
+colorTest1=#A7AEE2
+colorTest2=#313E95
+
+// ————— Time
+timeOffset=time-time[1]
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ————————————————————————————————————— FUNCTION  ——————————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+// ————— Converts color choise
+f_stringInColor(_color) =>
+    // _color: color label (string format).
+      _color  == "Aqua"     ? #0080FFef :
+      _color  == "Black"    ? #000000ef :
+      _color  == "Blue"     ? #013BCAef :
+      _color  == "Coral"    ? #FF8080ef :
+      _color  == "Gold"     ? #CCCC00ef :
+      _color  == "Gray"     ? #808080ef :
+      _color  == "Green"    ? #008000ef :
+      _color  == "Lime"     ? #00FF00ef :
+      _color  == "Maroon"   ? #800000ef :
+      _color  == "Orange"   ? #FF8000ef :
+      _color  == "Pink"     ? #FF0080ef :
+      _color  == "Red"      ? #FF0000ef :
+      _color  == "Violet"   ? #AA00FFef :
+      _color  == "Yellow"   ? #FFFF00ef : #FFFFFFff
+
+// ————— Converts current resolution
+f_resolutionInString(_res) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+      _res  == "1"   ? "M1"  :
+      _res  == "3"   ? "M3"  :
+      _res  == "5"   ? "M5"  :
+      _res  == "15"  ? "M15" :
+      _res  == "30"  ? "M30" :
+      _res  == "45"  ? "M45" :
+      _res  == "60"  ? "H1"  :
+      _res  == "120" ? "H2"  :
+      _res  == "180" ? "H3"  :
+      _res  == "240" ? "H4"  :
+      _res  == "1D"  ? "D"   :
+      _res  == "1W"  ? "W"   :
+      _res  == "1M"  ? "M"   : _res
+
+// ————— Returns the tenkan text
+f_getTenkanText(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "Tk " + tf  : "Tenkan " + tf
+
+// ————— Returns the tenkan text
+f_getKijunText(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "Kj " + tf  : "Kijun " + tf
+
+// ————— Returns the 26 text
+f_get26Text(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "26" + tf  : "26" + tf
+
+// ————— Returns the 65 text
+f_get65Text(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "65" + tf  : "65" + tf
+
+// ————— Returns the 129 text
+f_get129Text(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "129" + tf  : "129" + tf
+
+// ————— Returns the 234 text
+f_get234Text(_res, _isAbbreviation) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    tf = f_resolutionInString(_res)
+    _isAbbreviation ? "234" + tf  : "234" + tf
+
+
+// ————— Converts current "timeframe.multiplier" plus the TF into minutes of type float.
+f_resolutionInMinutes() => 
+   timeframe.multiplier * (
+	 timeframe.isseconds ? 1. / 60. :
+	 timeframe.isminutes ? 1.       :
+	 timeframe.isdaily   ? 1440.    :
+	 timeframe.isweekly  ? 10080.   :
+	 timeframe.ismonthly ? 43800.   : na)
+
+
+// ————— Returns resolution of _resolution period in minutes.
+f_timeFrameResolutionInMinutes(_res) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    security(syminfo.tickerid, _res, f_resolutionInMinutes())
+
+// ————— Returns the average number of current chart bars in the given target HTF resolution (this reflects the dataset's history).
+f_avgDilationOf(_res) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    b = barssince(change(time(_res)))
+    cumTotal = cum(b == 0 ? b[1] + 1 : 0)
+    cumCount = cum(b == 0 ? 1 : 0)
+    round(cumTotal / cumCount)
+
+// ————— Returns average value between lowest and highest
+f_avgLH(_len) => avg(lowest(_len), highest(_len))
+
+// ————— Returns f_donchian data 
+f_donchian(_tf, _src) => security(syminfo.tickerid, _tf, _src, barmerge.gaps_off, barmerge.lookahead_on)
+
+// ————— Returns ichimoku data
+f_ichimokuData(_isActive, _tf) =>
+	_isShow = _isActive and f_timeFrameResolutionInMinutes(_tf) >= f_resolutionInMinutes()
+	_26 = _isShow ? f_donchian(_tf, f_avgLH(Periods26)) : na
+	_65 = _isShow ? f_donchian(_tf, f_avgLH(Periods65)) : na
+    _129 = _isShow ? f_donchian(_tf, f_avgLH(Periods129)) : na
+    _234 = _isShow ? f_donchian(_tf, f_avgLH(Periods234)) : na
+	[_26, _65, _129, _234]
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— FIRST ICHIMOKU  ——————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+[first26, first65, first129, first234] = f_ichimokuData(isActiveFirst, firstIchi)
+
+// ————— 26
+plot(isActiveFirst26 ? first26 : na, color=colorVeryLightBlue, title="First 26", linewidth=1, show_last=1000)
+// ————— 65
+plot(isActiveFirst65 ? first65 : na, color=colorLightBlue, title="First 65", linewidth=1, show_last=1000)
+// ————— 129
+plot(isActiveFirst129 ? first129 : na, color=colorDarkBlue, title="First 129", linewidth=1, show_last=1000)
+// ————— 234
+plot(isActiveFirst234 ? first234 : na, color=colorDarkBlue, title="First 234", linewidth=1, show_last=1000)
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— SECOND ICHIMOKU  —————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+[second26, second65, second129, second234] = f_ichimokuData(isActiveSecond, secondIchi)
+
+// ————— 26
+plot(isActiveSecond26 ? second26 : na, color=colorVeryLightGreen, title="Second 26", linewidth=1, show_last=1000)
+// ————— 65
+plot(isActiveSecond65 ? second65 : na, color=colorLightGreen, title="Second 65", linewidth=1, show_last=1000)
+// ————— 129
+plot(isActiveSecond129 ? second129 : na, color=colorDarkGreen, title="Second 129", linewidth=1, show_last=1000)
+// ————— 234
+plot(isActiveSecond234 ? second234 : na, color=colorDarkGreen, title="Second 234", linewidth=1, show_last=1000)
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————— THIRD ICHIMOKU  ——————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+[third26, third65, third129, third234] = f_ichimokuData(isActiveThird, thirdIchi)
+
+// ————— 26
+plot(isActiveThird26 ? third26 : na, color=colorVeryLightPink, title="Third 26", linewidth=1)
+// ————— 65
+plot(isActiveThird65 ? third65 : na, color=colorLightPink, title="Third 65", linewidth=1)
+// ————— 129
+plot(isActiveThird129 ? third129 : na, color=colorDarkPink, title="Third 129", linewidth=1)
+// ————— 234
+plot(isActiveThird234 ? third234 : na, color=colorDarkPink, title="Third 234", linewidth=1)
+
+// ——————————————————————————————————————————————————————————————————————————————————————
+// ——————————————————————————————————————— LABEL ————————————————————————————————————————
+// ——————————————————————————————————————————————————————————————————————————————————————
+
+var label first26Label = na
+var label first65Label = na
+var label first129Label = na
+var label first234Label = na
+
+var label second26Label = na
+var label second65Label = na
+var label second129Label = na
+var label second234Label = na
+var label secondKumoLabel = na
+
+var label third26Label = na
+var label third65Label = na
+var label third129Label = na
+var label third234Label = na
+
+var label fourth26Label = na
+var label fourth65Label = na
+var label fourth129Label = na
+var label fourth234Label = na
+
+label.delete(first26Label)
+label.delete(first65Label)
+label.delete(first129Label)
+label.delete(first234Label)
+
+label.delete(second26Label)
+label.delete(second65Label)
+label.delete(second129Label)
+label.delete(second234Label)
+label.delete(secondKumoLabel)
+
+label.delete(third26Label)
+label.delete(third65Label)
+label.delete(third129Label)
+label.delete(third234Label)
+
+label.delete(fourth26Label)
+label.delete(fourth65Label)
+label.delete(fourth129Label)
+label.delete(fourth234Label)
+
+if isActiveFirst and isActiveLabel and f_timeFrameResolutionInMinutes(firstIchi) >= f_resolutionInMinutes()
+    offsetLabel=time+(timeOffset*labelOffset)
+    offsetFirst=labelOffset < 0 ? labelOffset : 0
+    if isActiveFirst26
+        first26Label:=label.new(x=offsetLabel, y=first26[offsetFirst], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(first26Label, f_get26Text(firstIchi, isActiveAbbreviation))
+        label.set_textcolor(first26Label, labelColor == 'Original' ? colorDarkBlue : f_stringInColor(labelColor))
+
+    if isActiveFirst65
+        first65Label:=label.new(x=offsetLabel, y=first65[offsetFirst], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(first65Label, f_get65Text(firstIchi, isActiveAbbreviation))
+        label.set_textcolor(first65Label, labelColor == 'Original' ? colorDarkBlue : f_stringInColor(labelColor))
+    if isActiveFirst129
+        first129Label:=label.new(x=offsetLabel, y=first129[offsetFirst], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(first129Label, f_get129Text(firstIchi, isActiveAbbreviation))
+        label.set_textcolor(first65Label, labelColor == 'Original' ? colorDarkBlue : f_stringInColor(labelColor))
+    if isActiveFirst234
+        first234Label:=label.new(x=offsetLabel, y=first234[offsetFirst], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(first234Label, f_get234Text(firstIchi, isActiveAbbreviation))
+        label.set_textcolor(first65Label, labelColor == 'Original' ? colorDarkBlue : f_stringInColor(labelColor))
+
+if isActiveSecond and isActiveLabel and f_timeFrameResolutionInMinutes(secondIchi) >= f_resolutionInMinutes()
+    offsetLabel=time+(timeOffset*labelOffset)
+    offsetSecond=labelOffset < 0 ? labelOffset : 0
+    if isActiveSecond26
+        second26Label:=label.new(x=offsetLabel, y=second26[offsetSecond], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(second26Label, f_get26Text(secondIchi, isActiveAbbreviation))
+        label.set_textcolor(second26Label, labelColor == 'Original' ? colorDarkGreen : f_stringInColor(labelColor))
+    if isActiveSecond65
+        second65Label:=label.new(x=offsetLabel, y=second65[offsetSecond], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(second65Label, f_get65Text(secondIchi, isActiveAbbreviation))
+        label.set_textcolor(second65Label, labelColor == 'Original' ? colorDarkGreen : f_stringInColor(labelColor))
+    if isActiveSecond129
+        second129Label:=label.new(x=offsetLabel, y=second129[offsetSecond], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(second129Label, f_get129Text(secondIchi, isActiveAbbreviation))
+        label.set_textcolor(second129Label, labelColor == 'Original' ? colorDarkGreen : f_stringInColor(labelColor))
+    if isActiveSecond234
+        second234Label:=label.new(x=offsetLabel, y=second234[offsetSecond], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(second234Label, f_get234Text(secondIchi, isActiveAbbreviation))
+        label.set_textcolor(second234Label, labelColor == 'Original' ? colorDarkGreen : f_stringInColor(labelColor))
+
+if isActiveThird and isActiveLabel and f_timeFrameResolutionInMinutes(thirdIchi) >= f_resolutionInMinutes()
+    offsetLabel=time+(timeOffset*labelOffset)
+    offsetThird=labelOffset < 0 ? labelOffset : 0
+    if isActiveThird26
+        third26Label:=label.new(x=offsetLabel, y=third26[offsetThird], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(third26Label, f_get26Text(thirdIchi, isActiveAbbreviation))
+        label.set_textcolor(third26Label, labelColor == 'Original' ? colorDarkPink : f_stringInColor(labelColor))
+    if isActiveThird65
+        third65Label:=label.new(x=offsetLabel, y=third65[offsetThird], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(third65Label, f_get65Text(thirdIchi, isActiveAbbreviation))
+        label.set_textcolor(third65Label, labelColor == 'Original' ? colorDarkPink : f_stringInColor(labelColor))
+    if isActiveThird129
+        third129Label:=label.new(x=offsetLabel, y=third129[offsetThird], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(third129Label, f_get129Text(thirdIchi, isActiveAbbreviation))
+        label.set_textcolor(third129Label, labelColor == 'Original' ? colorDarkPink : f_stringInColor(labelColor))
+    if isActiveThird234
+        third234Label:=label.new(x=offsetLabel, y=third234[offsetThird], xloc=xloc.bar_time, style=label.style_none)
+        label.set_text(third234Label, f_get234Text(thirdIchi, isActiveAbbreviation))
+        label.set_textcolor(third234Label, labelColor == 'Original' ? colorDarkPink : f_stringInColor(labelColor))
