@@ -1,5 +1,5 @@
 //@version=5
-indicator(title="Stock - Ichimoku Future", shorttitle="Ichi future", overlay=true)
+indicator(title="Stock - Ichimoku Future", overlay=true)
 
 // ichi past line
 isActiveKumo = input.bool(true, "Show Kumo", group="Display")

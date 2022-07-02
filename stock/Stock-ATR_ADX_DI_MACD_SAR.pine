@@ -2,7 +2,7 @@
 // trungnguyen
 
 //@version=4
-study("Stock - ADX MACD SAR")
+study("Stock - ATR ADX MACD SAR", overlay=true)
 
 useCurrentRes = input(false, title="Use Current Chart Resolution?", group="Timeframe Setting")
 resCustom     = input("3D",  "► Time frame", type = input.resolution, group="Timeframe Setting")
@@ -112,16 +112,16 @@ hline(threshold, color=color.black)
 hline(50, color=color.blue)
 
 // show MACD
-plotshape(isMACD ? threshold : na, title="MACD Cross", text="M", location=location.absolute, style=shape.labeldown, size=size.tiny, color=macd_color, textcolor=color.white, transp=0, offset=-1, show_last=showLast)
+plotshape(isMACD ? threshold : na, title="MACD Cross", text="M", location=location.absolute, style=shape.labeldown, size=size.tiny, color=macd_color, textcolor=color.white, offset=-1, show_last=showLast)
 // plot(cross(outMacD, outSignal) ? threshold : na, title="MACD Cross Signal", style=plot.style_cross, linewidth=4, color=macd_color, show_last=showLast)
 
 // show SAR
 // plot(sarUp and showUp>showUp[1]? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colUp, show_last=showLast)
 // plot(sarDown and showDown>showDown[1] ? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colDown, show_last=showLast)
-plotshape(sarUp and showUp>showUp[1] ? 50 : na, title="SAR Buy", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
-plotshape(sarDown and showDown>showDown[1] ? 50 : na, title="SAR Sell", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(sarUp and showUp>showUp[1] ? 50 : na, title="SAR Buy", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(sarDown and showDown>showDown[1] ? 50 : na, title="SAR Sell", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)
 
 
 // show ATR
-plotshape(buySignal ? 50 : na, title="ATR Buy", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
-plotshape(sellSignal ? 50 : na, title="ATR Sell", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(buySignal ? 50 : na, title="ATR Buy", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(sellSignal ? 50 : na, title="ATR Sell", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)

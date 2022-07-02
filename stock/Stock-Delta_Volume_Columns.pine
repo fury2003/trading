@@ -35,7 +35,7 @@ string  i_colorTheme          = input(TH2,    "Color Theme",                    
 string  i_displayMode         = input(DP2,    "Main Display",                               group = GP1, options = [DP1, DP2])
 bool    i_displayBalanceMa    = input(OFF,    "With Volume Balance: Display Its MA",        group = GP1, options = [OFF, ON]) == ON
 bool    i_showTotalVolumeMA   = input(ON,     "With Columns: Display Total Volume MA",      group = GP1, options = [OFF, ON]) == ON
-string  i_displayDivMode      = input(VD3,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
+string  i_displayDivMode      = input(VD2,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
 string  i_colorThemeDiv       = input(DC2,    "Color",                                      group = GP1, options = [DC1, DC2], tooltip = "'" + DC1 + "' only applies to chart bars and volume columns. '")
 bool    i_realtimeMode        = input(ON,     "Realtime Mode",                              group = GP1, options = [OFF, ON], tooltip = "Enables a distinct calculation mode which works only on realtime bars and uses price and volume differences between realtime bar updates to determine Buy/Sell/Neutral volume.") == ON
 bool    i_showPressureSignal  = input(ON,     "Show Pressure Signals",                      group = GP1, options = [OFF, ON]) == ON
@@ -69,14 +69,14 @@ color myPurpleRaw = color.new(#6123db, 0),        color myPurpleMedium = color.n
 color myGrayRaw = color.new(color.gray, 0),       color myGrayMedium = color.new(color.gray, 35),       color myGrayDark = color.new(color.gray, 70)
 color myGreenBackGround = color.new(#00FF00,91),  color myRedBackGround = color.new(#FF0000,90),        color invisible = color.new(color.white, 100)
 // ————— Vary column colors with theme.
-color myColumnRedBright   = colorThemeDark ? #4D0010FF : myRedMedium
-color myColumnRedDark     = colorThemeDark ? #34000BFF : myRedDark
-color myColumnRedDivB     = colorThemeDark ? #CD0202FF : #CD0202FF
-color myColumnRedDivD     = colorThemeDark ? #990000FF : #CD0202FF
-color myColumnGreenBright = colorThemeDark ? #0B3500FF : #199919FF
-color myColumnGreenDark   = colorThemeDark ? #061C00FF : #008000FF
-color myColumnGreenDivB   = colorThemeDark ? #199919FF : myGreenMedium
-color myColumnGreenDivD   = colorThemeDark ? #006600FF : myGreenMedium
+color myColumnRedBright   = colorThemeDark ? color.new(#4D0010FF,0) : myRedMedium
+color myColumnRedDark     = colorThemeDark ? color.new(#34000BFF,0) : myRedDark
+color myColumnRedDivB     = colorThemeDark ? color.new(#CD0202FF,0) : color.new(#CD0202FF,0)
+color myColumnRedDivD     = colorThemeDark ? color.new(#990000FF,0) : color.new(#CD0202FF,0)
+color myColumnGreenBright = colorThemeDark ? color.new(#0B3500FF,0) : color.new(#199919FF,0)
+color myColumnGreenDark   = colorThemeDark ? color.new(#061C00FF,0) : color.new(#008000FF,0)
+color myColumnGreenDivB   = colorThemeDark ? color.new(#199919FF,0) : myGreenMedium
+color myColumnGreenDivD   = colorThemeDark ? color.new(#006600FF,0) : myGreenMedium
 // }
 
 // ———————————————————— Functions
@@ -419,10 +419,10 @@ p_zeroPlot = plot(okToPlot and i_showTotalVolumeMA and displayColumns ? 0 : na, 
 fill(p_volMaPlot, p_zeroPlot, myOrangeDarkDark)
 
 // ————— Pressure Signal
-plotshape(i_showPressureSignal and rvol4 < sma2 and open < close, color = color.lime, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", transp=0, show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol4 < sma2 and open > close, color = color.maroon, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", transp=0, show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol3 > sma1 and open < close, color = color.lime, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", transp=0, show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol3 > sma1 and open > close, color = color.maroon, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", transp=0, show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol4 < sma2 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol4 < sma2 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
 
 var table perfTable = table.new(position.top_right, 4, 5, border_width = 0)
 f_fillAverageVolume(_table, _column, _row, _value) =>

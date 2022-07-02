@@ -90,12 +90,12 @@ uptrend   = crossover(laggingSpan,maxC) and laggingSpan>c[26]  and rsi<65
 downtrend = crossunder(laggingSpan,minC) and laggingSpan<c[26] and rsi>35
 
 // show chikou open
-plotshape(isActiveOpenChikou ? uptrend ? lower : na : na, title="Chikou buy break out", text="C", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
-plotshape(isActiveOpenChikou ? downtrend ? upper : na : na, title="Chikou sell break out", text="C", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(isActiveOpenChikou ? uptrend ? lower : na : na, title="Chikou buy break out", text="C", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(isActiveOpenChikou ? downtrend ? upper : na : na, title="Chikou sell break out", text="C", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)
 
 // show aosen break
-plotshape(isActiveBreakoutAosen ? aosenUp ? lower : na : na, title="Aosen buy break out", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
-plotshape(isActiveBreakoutAosen ? aosenDown ? upper : na : na, title="Aosen sell break out", text="A", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(isActiveBreakoutAosen ? aosenUp ? lower : na : na, title="Aosen buy break out", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(isActiveBreakoutAosen ? aosenDown ? upper : na : na, title="Aosen sell break out", text="A", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)
 
 /////// Alerts /////
 //alertcondition(down,title="down")
