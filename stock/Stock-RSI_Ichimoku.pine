@@ -4,10 +4,10 @@ study("Stock - RSI Ichimoku")
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
 // ——————————————————————————————————————————————————————————————————————————————————————
-isActiveChikou       = input(true,  title="Show Chikou", group="Display")
 isActiveBreakoutKumo = input(true,  title="Show Breakout Kumo", group="Display")
+isActiveBreakoutAosen = input(true,  title="Show Breakout Aosen", group="Display")
 isActiveOpenChikou   = input(true,  title="Show Open Chikou", group="Display")
-showLast             = input(title="Show last", type=input.integer, defval=100, group="Display")
+showLast             = input(title="Show last", type=input.integer, defval=500, group="Display")
 
 len                  = input(21, "RSI Length", minval=1, group="RSI Setting")
 conversionPeriods    = input(9, minval=1, title="Conversion Line Periods", group="Ichimoku Setting")
@@ -22,9 +22,9 @@ o = t(open)
 h = t(high)
 l = t(low)
 c = t(close)
-upper=input(70)
+upper=input(75)
 mid=input(50)
-lower=input(30)
+lower=input(25)
 plot(upper, color=color.blue)
 plot(mid, color=color.silver)
 plot(lower, color=color.blue)
@@ -44,13 +44,13 @@ a1 = plot(conversionLine, color=color.navy, title="Conversion Line")
 a2 = plot(baseLine, color=color.maroon, title="Base Line")
 fill(a1, a2, color=color.silver)
 
-plot(isActiveChikou?c:na, offset = -displacement+1, color=color.black, title="Lagging Span")
+plot(c, offset = -displacement+1, color=color.black, title="Lagging Span")
 p1 = plot(leadLine1, offset = displacement-1, color=color.green, title="Lead 1")
 p2 = plot(leadLine2, offset = displacement-1, color=color.red, title="Lead 2")
 fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red)
 
-aosenUp = crossover(c,_maxAosen) and rsi<65
-aosenDown = crossunder(c,_minAosen) and rsi>35
+aosenUp = crossover(c,_maxAosen)
+aosenDown = crossunder(c,_minAosen) 
  
 leadingsspanA = leadLine1[(26-1)*2]
 leadingsspanB = leadLine2[(26-1)*2]
@@ -77,11 +77,11 @@ crossdown = crossunder(c, minSS)
 if red_candle
     breakdown := crossdown
 
-// kumo breakout strategy
-bullishSSA = breakup and c>baseLine and laggingSpan>c[26] and rsi<=60
-bearishSSB = breakdown and c<baseLine and laggingSpan<c[26] and rsi>=40
-plot(isActiveBreakoutKumo?bullishSSA?lower:na:na, style=plot.style_cross, color=color.green, linewidth=3, show_last=showLast)
-plot(isActiveBreakoutKumo?bearishSSB?upper:na:na, style=plot.style_cross, color=color.red, linewidth=3, show_last=showLast)
+// kumo breakout + close>kijun + chikou > close[25] + rsi
+bullishSSA = breakup and c>baseLine and laggingSpan>c[25] and rsi>=50 
+bearishSSB = breakdown and c<baseLine and laggingSpan<c[25] and rsi<=50
+bgcolor(bullishSSA ? color.green : na, title="Break Up Background", show_last=showLast)
+bgcolor(bearishSSB ? color.red : na, title="Break Down Background", show_last=showLast)
 
 // chikou open space strategy
 maxC = max(leadingsspanA,leadingsspanB)
@@ -89,12 +89,13 @@ minC = min(leadingsspanA,leadingsspanB)
 uptrend   = crossover(laggingSpan,maxC) and laggingSpan>c[26]  and rsi<65
 downtrend = crossunder(laggingSpan,minC) and laggingSpan<c[26] and rsi>35
 
-plot(isActiveOpenChikou?uptrend?laggingSpan:na:na, style=plot.style_circles, color=color.navy, linewidth=3, show_last=showLast)
-plot(isActiveOpenChikou?downtrend?laggingSpan:na:na, style=plot.style_circles, color=color.navy, linewidth=3, show_last=showLast)
+// show chikou open
+plotshape(isActiveOpenChikou ? uptrend ? lower : na : na, title="Chikou buy break out", text="C", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(isActiveOpenChikou ? downtrend ? upper : na : na, title="Chikou sell break out", text="C", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
 
-//ao sen
-bgcolor(aosenUp?color.green:na, title="Break Up Background", show_last=showLast)
-bgcolor(aosenDown?color.red:na, title="Break Down Background", show_last=showLast)
+// show aosen break
+plotshape(isActiveBreakoutAosen ? aosenUp ? lower : na : na, title="Aosen buy break out", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.green, textcolor=color.white, transp=0, show_last=showLast)
+plotshape(isActiveBreakoutAosen ? aosenDown ? upper : na : na, title="Aosen sell break out", text="A", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.red, textcolor=color.white, transp=0, show_last=showLast)
 
 /////// Alerts /////
 //alertcondition(down,title="down")

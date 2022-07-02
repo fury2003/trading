@@ -297,9 +297,9 @@ plotshape(showeu ? effUp : na, style=shape.triangleup, location=location.belowba
 plotshape(showed ? effDown : na, style=shape.triangledown, location=location.abovebar, color=color.maroon, text="ED", editable=false, size=size.tiny, show_last=showLast) 
 
 // Buying/Selling Climax, Stopping Volume
-plotshape(showbc ? bc and not UT and not chikouLostSell : na, "BC", style=shape.xcross, location=location.abovebar, color=color.maroon, text="BC", editable=false, size=size.tiny, show_last=showLast) 
-plotshape(showsc ? sc and not ST and not chikouLostBuy : na, "SC", style=shape.xcross, location=location.belowbar, color=color.navy, text="SC", editable=false, size=size.tiny, show_last=showLast) 
-plotshape(showsv ? stopVolume and not ST and not chikouLostBuy: na, "SV", style=shape.xcross, location=location.belowbar, color=color.navy, text="SV", editable=false, size=size.tiny, show_last=10) 
+plotshape(showbc ? bc and not UT and not chikouLostSell : na, "BC", style=shape.diamond, location=location.abovebar, color=color.maroon, text="BC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsc ? sc and not ST and not chikouLostBuy : na, "SC", style=shape.diamond, location=location.belowbar, color=color.navy, text="SC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsv ? stopVolume and not ST and not chikouLostBuy: na, "SV", style=shape.diamond, location=location.belowbar, color=color.navy, text="SV", editable=false, size=size.tiny, show_last=10) 
 
 //=========================================================================|
 //                   VSA + ICHIMOKU SIGNAL                                 |
@@ -337,8 +337,8 @@ plotshape(showaosenbreak and showkumobreak? aosenUp and chikouOpenUp : na, color
 plotshape(showaosenbreak and showkumobreak ? aosenDown and chikouOpenDown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="ACBD", title="Aosen Chikou Breakout Downward", show_last=showLast)
 
 //Chikou lost home
-plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.xcross, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
-plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.xcross, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
+plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.diamond, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
+plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.diamond, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
 
 // Combine chikou open space + kumo breakout
 plotshape(showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)

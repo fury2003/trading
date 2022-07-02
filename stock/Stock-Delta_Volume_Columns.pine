@@ -1,0 +1,464 @@
+//@version=4
+//@author=trungnguyen
+
+// Delta Volume Columns [LucF]
+//  v7.0, 2021.04.17 18:49 — LucF
+
+// This indicator calculates delta volume derived from intrabar information on historical bars, and from tick data on realtime bars.
+// It can displays:
+//  - Stacked volume columns divided in neutral, buy and sell sections.
+//  - Volume balance as determined by the delta between the MAs of buy/sell volume.
+//  - Relative Delta Volume as determined by the portion of Buy/Sell values exceeding their respective MAs.
+//  - Divergences between price movement and buy/sell volume balance.
+//  - Non-repainting markers on different conditions, which can be used to trigger non-repainting alerts.
+
+// This code was written using:
+//  • Code borrowed from a comment by LucF to a Backtest Rookies presentation of an intrabar delta volume indicator here: https://backtest-rookies.com/2019/02/15/tradingview-volume-profile-with-lower-time-frame-data/
+//  • The PineCoders Coding Conventions for Pine: http://www.pinecoders.com/coding_conventions/
+//  • Functions published in "Using `varip` variables [PineCoders]": https://www.tradingview.com/script/ppQxBISk-Using-varip-variables-PineCoders/
+
+// This indicator's page on TV: https://www.tradingview.com/script/YFBNr8I6-Delta-Volume-Columns-LucF/
+
+study("Stock - Delta Volume Columns", format = format.volume, max_labels_count = 500)
+
+// ———————————————————— Inputs
+// {
+string ON  = "On", string OFF = "Off"
+string TH1 = "For Dark Chart", string TH2 = "For Light Chart"
+string DP1 = "Volume Columns and Volume Balance MA Delta", string DP2 = "Volume Columns"
+string VD1 = "On Both", string VD2 = "In the indicator's display", string VD3 = "On Chart Bars", string VD4 = "None"
+string DC1 = "Green/Red with Up/Down Price Bar", string DC2 = "Orange"
+string TF1 = "Fast, Longer history, Auto-Steps (1min, 5min, 60min, 1D)", string TF2 = "More Precise, Shorter History Auto-Steps (1min, 30min, 1D)", string TF3 = "Fixed"
+string GP1 = "Display", string GP2 = "Settings", string GP3 = "Markers"
+
+string  i_colorTheme          = input(TH2,    "Color Theme",                                group = GP1, options = [TH1, TH2], tooltip = "Only affect the color of columns.")
+string  i_displayMode         = input(DP2,    "Main Display",                               group = GP1, options = [DP1, DP2])
+bool    i_displayBalanceMa    = input(OFF,    "With Volume Balance: Display Its MA",        group = GP1, options = [OFF, ON]) == ON
+bool    i_showTotalVolumeMA   = input(ON,     "With Columns: Display Total Volume MA",      group = GP1, options = [OFF, ON]) == ON
+string  i_displayDivMode      = input(VD3,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
+string  i_colorThemeDiv       = input(DC2,    "Color",                                      group = GP1, options = [DC1, DC2], tooltip = "'" + DC1 + "' only applies to chart bars and volume columns. '")
+bool    i_realtimeMode        = input(ON,     "Realtime Mode",                              group = GP1, options = [OFF, ON], tooltip = "Enables a distinct calculation mode which works only on realtime bars and uses price and volume differences between realtime bar updates to determine Buy/Sell/Neutral volume.") == ON
+bool    i_showPressureSignal  = input(ON,     "Show Pressure Signals",                      group = GP1, options = [OFF, ON]) == ON
+bool    i_showCurrentVolume   = input(ON,     "Show Current Volume",                        group = GP1, options = [OFF, ON]) == ON
+bool    i_showAverageVolume   = input(ON,     "Show Volume Average",                        group = GP1, options = [OFF, ON]) == ON
+bool    i_showRVOL            = input(ON,     "Show RVOL Calculation",                      group = GP1, options = [OFF, ON]) == ON
+bool    i_showPressurePer     = input(ON,     "Show Pressure Direction Percentage",         group = GP1, options = [OFF, ON]) == ON
+string  i_itfType             = input(TF2,    "Intrabar timeframe",                         group = GP2, inline = "res", options = [TF1, TF2, TF3], tooltip = "Only 'Fixed' mode uses the timeframe selected in the dropdown menu. Otherwise, the intrabar timeframe is automatically calculated from the chart's timeframe.")
+string  i_itfTypeFixedRes     = input("D",   "",                                           group = GP2, inline = "res", type = input.resolution)
+int     i_pressureLookBack    = input(17,     "Lookback bars for Pressure Percentage",      group = GP2)
+int     i_totalVolMaLength    = input(26,     "Total Volume MA Period",                     group = GP2)
+int     i_balanceMaLength     = input(65,     "Lookback bars for Average",                  group = GP2, tooltip = "The Buy and Sell volume MAs calculated using this period are the same MAs used in the 'Relative Delta Volume' calculations.")
+int     i_showLast            = input(200,    "Show Last",                                  group = GP2)
+
+// ————— Input settings.
+bool colorThemeDark      = i_colorTheme == TH1
+bool displayColumns      = i_displayMode == DP1 or i_displayMode == DP2
+bool displayBalance      = i_displayMode == DP1
+bool displayDivInPane    = i_displayDivMode == VD1 or i_displayDivMode == VD2
+bool displayDivBars      = i_displayDivMode == VD1 or i_displayDivMode == VD3
+bool colorDiv            = i_colorThemeDiv != DC2
+
+// —————————— Colors
+color myGreenRaw = color.new(#00FF00,0),          color myGreenMedium = color.new(#00FF00,30),          color myGreenSemiDark = color.new(#00FF00,50),         color myGreenDark = color.new(#00FF00,70),        color myGreenDarkDark = color.new(#00FF00,80),    color myGreenDarkDarkDark = color.new(#00FF00,88)
+color myRedRaw = color.new(#FF0000,0),            color myRedMedium = color.new(#FF0000,25),            color myRedSemiDark = color.new(#FF0000,50),           color myRedDark = color.new(#FF0000,60),          color myRedDarkDark = color.new(#FF0000,75),      color myRedDarkDarkDark = color.new(#FF0000,85)
+color myOrangeRaw = color.new(#FF9800,0),         color myOrangeMedium = color.new(#FF9800,30),         color myOrangeSemiDark = color.new(#FF9800,50),        color myOrangeDark = color.new(#FF9800,65),       color myOrangeDarkDark = color.new(#FF9800,80)
+color myYellowRaw = color.new(color.yellow,0),    color myYellowMedium = color.new(color.yellow,25),    color myYellowSemiDark = color.new(color.yellow,50),   color myYellowDark = color.new(color.yellow,70)
+color myFuchsiaRaw = color.new(color.fuchsia,0),  color myFuchsiaMedium = color.new(color.fuchsia,30),  color myFuchsiaSemiDark = color.new(color.fuchsia,45), color myFuchsiaDark = color.new(color.fuchsia,60)
+color myBlueRaw = color.new(#4985E7,0),           color myBlueMedium = color.new(#4985E7,20),           color myBlueDark = color.new(#4985E7,55)
+color myPurpleRaw = color.new(#6123db, 0),        color myPurpleMedium = color.new(#6123db,30),         color myPurpleDark = color.new(#6123db,65)
+color myGrayRaw = color.new(color.gray, 0),       color myGrayMedium = color.new(color.gray, 35),       color myGrayDark = color.new(color.gray, 70)
+color myGreenBackGround = color.new(#00FF00,91),  color myRedBackGround = color.new(#FF0000,90),        color invisible = color.new(color.white, 100)
+// ————— Vary column colors with theme.
+color myColumnRedBright   = colorThemeDark ? #4D0010FF : myRedMedium
+color myColumnRedDark     = colorThemeDark ? #34000BFF : myRedDark
+color myColumnRedDivB     = colorThemeDark ? #CD0202FF : #CD0202FF
+color myColumnRedDivD     = colorThemeDark ? #990000FF : #CD0202FF
+color myColumnGreenBright = colorThemeDark ? #0B3500FF : #199919FF
+color myColumnGreenDark   = colorThemeDark ? #061C00FF : #008000FF
+color myColumnGreenDivB   = colorThemeDark ? #199919FF : myGreenMedium
+color myColumnGreenDivD   = colorThemeDark ? #006600FF : myGreenMedium
+// }
+
+// ———————————————————— Functions
+// {
+// —————————— Intrabar TF selection. 
+// ————— Converts current chart resolution into a float minutes value.
+f_resInMinutes() => 
+    _resInMinutes = timeframe.multiplier * (
+      timeframe.isseconds ? 1. / 60             :
+      timeframe.isminutes ? 1.                  :
+      timeframe.isdaily   ? 60. * 24            :
+      timeframe.isweekly  ? 60. * 24 * 7        :
+      timeframe.ismonthly ? 60. * 24 * 30.4375  : na)
+// ————— Returns the float minutes value of the string _res.
+f_tfResInMinutes(_res) =>
+    // string _res: resolution of any TF (in "timeframe.period" string format).
+    // Dependency: f_resInMinutes().
+    security(syminfo.tickerid, _res, f_resInMinutes())
+// ————— Given a resolution in float minutes, returns next step of HTF (faster version with coarser intrabar resolutions).
+f_resNextStepFast(_res) =>
+    // string _res: current TF in fractional minutes.
+    _res    >= 60 * 24 * 7  ? "D"  :
+      _res  >= 60 * 24      ? "60" :
+      _res  >= 60 * 6       ? "5"  : "1"
+// ————— Given a resolution in float minutes, returns next step of HTF (slower version with finer intrabar resolutions).
+f_resNextStepPrecise(_res) =>
+    // float _res: current TF in fractional minutes.
+    _res    >= 60 * 24 * 7  ? "D"  :
+      _res  >= 60 * 24      ? "30" : "1"
+
+// ————— Function displays a label containing `_txt` at position `_y` in `_color` and at bar `_offset` from last bar. No background is used.
+f_print(_txt, _y, _color) => 
+    // string _txt : text to display.
+    // float _y    : y position of label.
+    // color _color: color of text.
+    // Create the label on the first bar and only update it when on the dataset's last bar; it's more efficient.
+    var label _lbl = label.new(bar_index, _y, _txt, xloc.bar_index, yloc.price, #00000000, label.style_label_left, _color, size.large, text.align_left)
+    if barstate.islast
+        label.set_x(_lbl, bar_index)
+        label.set_text(_lbl, _txt)
+        label.set_textcolor(_lbl, _color)
+
+// ————— Function appends the `_text` error message to the `_msg` string when `_error` is true.
+f_checkError(_error, _msg, _text) => _error ? (_msg != "" ? "\n" : "") + _msg + _text : _msg
+
+// —————————— Intrabar volume totalling.
+// This is the part of code that is borrowed from Kuan.
+// Even though each function is called only once per current chart bar,
+// once it is transported to the lower TF by the "security()" function,
+// it actually is executed once per intrabar, starting from the earliest one
+// in the current TF bar and moving right towards the last one.
+// It's as if the security function puts the function inside a loop
+// similar to a normal script's runtime environment, but only for the number
+// of intrabars in the current TF, which may be irregular (at 60min on chart,
+// there will not always be 12 5min intrabars).
+// Thx to @theheirophant for working with me in figuring out how this works.
+
+f_getVolNeutral(_tf) =>
+    // Add intrabar volume when open == close.
+    var float _vol = na
+    if change(time(_tf))
+        // First intrabar detected: init volume.
+        _vol := open == close ? volume : 0
+    else
+        // On all other intrabars than the first, add volume conditionally.
+        _vol := _vol + (open == close ? volume : 0)
+    _vol
+
+f_getVolBuy(_tf) =>
+    // Add intrabar volume when open < close.
+    var float _vol = na
+    if change(time(_tf))
+        // First intrabar detected: init volume.
+        _vol := open < close ? volume : 0
+    else
+        // On all other intrabars than the first, add volume conditionally.
+        _vol := _vol + (open < close ? volume : 0)
+    _vol
+
+f_getVolSell(_tf) =>
+    // Add intrabar volume when open > close.
+    var float _vol = na
+    if change(time(_tf))
+        // First intrabar detected: init volume.
+        _vol := open > close ? volume : 0
+    else
+        // On all other intrabars than the first, add volume conditionally.
+        _vol := _vol + (open > close ? volume : 0)
+    _vol
+// }
+
+
+// ———————————————————— Calculations
+// {
+// ————— Determine if we are on a realtime bar, as we do not show results there.
+historicalBar       = not barstate.isrealtime
+
+// ————— Determine intrabar resolution.
+var resInMinutes    = f_resInMinutes()
+var lowerRes        = i_itfType == TF1 ? f_resNextStepFast(resInMinutes) : i_itfType == TF2 ? f_resNextStepPrecise(resInMinutes) : i_itfTypeFixedRes
+var errorResNotSupported = not (timeframe.period == "M" or timeframe.period == "W" or timeframe.period == "D" or resInMinutes == 720 or resInMinutes == 360 or resInMinutes == 240 or resInMinutes == 120 or resInMinutes == 60 or resInMinutes == 30 or resInMinutes == 15 or resInMinutes == 10 or resInMinutes == 5 or resInMinutes == 3)
+var errorResTooSmall = not errorResNotSupported and resInMinutes <= f_tfResInMinutes(lowerRes)
+var error = errorResNotSupported or errorResTooSmall
+
+// ————— Fetch intrabar buy/sell/neutral volume.
+f_nv(_curRes) => security(syminfo.tickerid, lowerRes, f_getVolNeutral(_curRes))
+f_bv(_curRes) => security(syminfo.tickerid, lowerRes, f_getVolBuy(_curRes))
+f_sv(_curRes) => security(syminfo.tickerid, lowerRes, f_getVolSell(_curRes))
+
+// ————— For realtime bars, calculate buy/sell/neutral volume on the fly, without using intrabars.
+// ————— Function returning, during realtime bars only, up, down and neutral volume determined by the movement of price between data feed updates.
+f_upDnNtVolume() =>
+    varip float _prevClose = open
+    varip float _prevVolume = 0.
+    varip float _volUp = 0.
+    varip float _volDn = 0.
+    varip float _volNt = 0.
+    if barstate.isnew
+        _volUp := 0.
+        _volDn := 0.
+        _volNt := 0.
+        _prevClose := nz(close[1])
+        _prevVolume := 0.
+    // Add this update's volume to the proper up/dn/nt slot, as per movement of price since the last update.
+    float _newVolume = volume - _prevVolume
+    if close > _prevClose
+        _volUp += _newVolume
+    else if close < _prevClose
+        _volDn += _newVolume
+    else
+        _volNt += _newVolume
+    _prevClose  := close
+    _prevVolume := volume
+    [_volUp, _volDn, _volNt]
+[rtVolUp, rtVolDn, rtVolNt] = f_upDnNtVolume()
+
+volUp = 
+  barstate.isrealtime         ? rtVolUp        :               
+  timeframe.period == "M"     ? f_bv("M"     ) :
+  timeframe.period == "W"     ? f_bv("W"     ) :
+  timeframe.period == "D"     ? f_bv("D"     ) :
+  timeframe.period == "720"   ? f_bv("720"   ) :
+  timeframe.period == "360"   ? f_bv("360"   ) :
+  timeframe.period == "240"   ? f_bv("240"   ) :
+  timeframe.period == "120"   ? f_bv("120"   ) :
+  timeframe.period == "60"    ? f_bv("60"    ) :
+  timeframe.period == "30"    ? f_bv("30"    ) :
+  timeframe.period == "15"    ? f_bv("15"    ) :
+  timeframe.period == "10"    ? f_bv("10"    ) :
+  timeframe.period == "5"     ? f_bv("5"     ) :
+  timeframe.period == "3"     ? f_bv("3"     ) : 0
+
+volDn = 
+  barstate.isrealtime         ? rtVolDn        :               
+  timeframe.period == "M"     ? f_sv("M"     ) :
+  timeframe.period == "W"     ? f_sv("W"     ) :
+  timeframe.period == "D"     ? f_sv("D"     ) :
+  timeframe.period == "720"   ? f_sv("720"   ) :
+  timeframe.period == "360"   ? f_sv("360"   ) :
+  timeframe.period == "240"   ? f_sv("240"   ) :
+  timeframe.period == "120"   ? f_sv("120"   ) :
+  timeframe.period == "60"    ? f_sv("60"    ) :
+  timeframe.period == "30"    ? f_sv("30"    ) :
+  timeframe.period == "15"    ? f_sv("15"    ) :
+  timeframe.period == "10"    ? f_sv("10"    ) :
+  timeframe.period == "5"     ? f_sv("5"     ) :
+  timeframe.period == "3"     ? f_sv("3"     ) : 0
+
+volNt = 
+  barstate.isrealtime         ? rtVolNt        :               
+  timeframe.period == "M"     ? f_nv("M"     ) :
+  timeframe.period == "W"     ? f_nv("W"     ) :
+  timeframe.period == "D"     ? f_nv("D"     ) :
+  timeframe.period == "720"   ? f_nv("720"   ) :
+  timeframe.period == "360"   ? f_nv("360"   ) :
+  timeframe.period == "240"   ? f_nv("240"   ) :
+  timeframe.period == "120"   ? f_nv("120"   ) :
+  timeframe.period == "60"    ? f_nv("60"    ) :
+  timeframe.period == "30"    ? f_nv("30"    ) :
+  timeframe.period == "15"    ? f_nv("15"    ) :
+  timeframe.period == "10"    ? f_nv("10"    ) :
+  timeframe.period == "5"     ? f_nv("5"     ) :
+  timeframe.period == "3"     ? f_nv("3"     ) : volume
+
+// —————————— Volume information assembly.
+// ————— Fudge volume values for stacked column plotting.
+// Total Volume will give us the gray neutral volume column top when Buying and Selling sections are printed over it.
+float volTotal      = volNt + volUp + volDn
+
+tt = "k"
+volSum = volTotal
+if volTotal < 1000
+	tt := ""
+if volTotal >= 1000
+	volSum := volTotal / 1000
+if volTotal >= 1000000
+	tt := "M"
+	volSum := volTotal / 1000000
+
+// Keep track of max total volume for top of scale placeholder when scale is not 1.
+var float volTotalMax = 0.0
+volTotalMax         := max(volTotalMax, nz(volTotal))
+
+// The red selling volume section of the column goes on top of the green Buying one, so add lower filler which will get covered by Buying volume.
+float fakeVolDn     = volDn + volDn
+
+// ————— Buy/Sell Volume MAs used to determine Volume Balance MAs Delta.
+float volTotalMa    = ema(volTotal, i_totalVolMaLength)
+float volUpMa       = ema(volUp, i_balanceMaLength)
+float volDnMa       = ema(volDn, i_balanceMaLength)
+float deltaVolMa    = volUpMa - volDnMa
+float deltaVolMaMa  = ema(deltaVolMa, i_balanceMaLength * 2)
+
+// ————— Relative Delta Volume.
+float volUpDelta    = max(0, volUp - volUpMa)
+float volDnDelta    = max(0, volDn - volDnMa)
+float relUpDnVol    = volUpDelta - volDnDelta
+
+// ————— States.
+bool volOverMa      = volTotal > volTotalMa
+bool buyingVol      = volUp > volDn
+bool sellingVol     = volUp < volDn
+bool priceVolDivUp  = sellingVol and close > open
+bool priceVolDivDn  = buyingVol  and close < open
+bool priceVolDiv    = priceVolDivUp or priceVolDivDn
+bool tooBigVolDiff  = abs(volTotal - volume) > volume * 0.999
+// }
+
+
+// ———————————————————— Calculate Pressure Signal
+x = "k"
+vol = volume
+if volume < 1000
+	x := ""
+if volume >= 1000
+	vol := volume / 1000
+if volume >= 1000000
+	x := "M"
+	vol := volume / 1000000
+if volume >= 1000000000
+	x := "B"
+	vol := volume / 1000000000
+
+spike = close - open <= 0 ? open - close  : close - open
+avg = array.new_float(0)
+for i = 1 to i_balanceMaLength
+	array.push(avg, spike[i])
+
+// Result = Price 
+rvol = spike / array.avg(avg)
+avg2 = array.new_float(0)
+for i = 1 to i_balanceMaLength
+	array.push(avg2, volume[i])
+// Effort = Volume
+rvol2 = volume / array.avg(avg2)
+
+y = "k"
+avg1 = array.avg(avg2)
+
+avg3 = avg1
+if avg1 < 1000
+	y := ""
+if avg1 >= 1000
+	avg3 := avg1 / 1000
+if avg1 >= 1000000
+	y := "M"
+	avg3 := avg1 / 1000000
+if avg1 >= 1000000000
+	y := "B"
+	avg3 := avg1 / 1000000000
+
+// result > effort    
+rvol3 = rvol - rvol2 > 0 ? rvol - rvol2 : na
+sma1 = sma(rvol3, i_totalVolMaLength)
+// result < effort  
+rvol4 = rvol - rvol2 < 0 ? rvol - rvol2 : na
+sma2 = sma(rvol4, i_totalVolMaLength)
+
+// calculate for volume table
+tot1 = close < open and (rvol - rvol2) < 0  ? (rvol - rvol2) * -1 : close > open and (rvol - rvol2) < 0  ? rvol - rvol2 * -1 : close > open and (rvol - rvol2) > 0  ? (rvol - rvol2) : close < open and (rvol - rvol2) > 0  ? (rvol - rvol2) : na
+totup = close < open and (rvol - rvol2) < 0  ? (rvol - rvol2) * -1 :  close > open and (rvol - rvol2) > 0  ? (rvol - rvol2) : na
+totdown = close > open and (rvol - rvol2) < 0  ? rvol - rvol2 * -1 : close < open and (rvol - rvol2) > 0  ? (rvol - rvol2) : na
+
+sumu = array.new_float(0)
+for i = 0 to i_pressureLookBack
+	array.push(sumu, totup[i])
+	
+sumd = array.new_float(0)
+for i = 0 to i_pressureLookBack
+	array.push(sumd, totdown[i])
+	
+tot = array.new_float(0)
+for i = 0 to i_pressureLookBack
+	array.push(tot, tot1[i])
+
+sumup = array.sum(sumu) 
+sumdown = array.sum(sumd) 
+sum = array.sum(tot) 
+
+percentup = (sumup / sum) * 100
+percentdown = (sumdown / sum) * 100
+percent = percentup > percentdown ? percentup : percentdown > percentup ? percentdown : na
+
+// ———————————————————— Plots
+// {
+bool okToPlot = not error or (i_realtimeMode and barstate.isrealtime)
+
+// ————— Print real (as opposed to composite values for column plotting) volume numbers in Data Window and indicator's values.
+// The "location.top" in these "plotchar()" calls is there to prevent the price scale to come in to play in the indicator's scale.
+// This is necessary, even if nothing is actually printed in the indicator's pane.
+// plotchar(volUp,       "Buy Volume",           "", location.top, myGreenRaw)
+// plotchar(volDn,       "Sell Volume",          "", location.top, myRedRaw)
+// plotchar(volNt,       "Neutral Volume",       "", location.top, myGrayMedium)
+// plotchar(volTotal,    "Total Volume",         "", location.top, tooBigVolDiff ? myOrangeRaw : myGreenRaw)
+// plotchar(0,           "═════════════",        "", location.top, myGrayMedium)
+// plotchar(volUpDelta,  "Relative Buy Volume",  "", location.top, volUpDelta > 0 ? myGreenRaw : myGrayMedium)
+// plotchar(volDnDelta,  "Relative Sell Volume", "", location.top, volDnDelta > 0 ? myRedRaw   : myGrayMedium)
+// plotchar(volUpMa,     "MA of Buy Volume",     "", location.top, volUpDelta > 0 ? myGreenRaw : myGrayMedium)
+// plotchar(volDnMa,     "MA of Sell Volume",    "", location.top, volDnDelta > 0 ? myRedRaw   : myGrayMedium)
+// plotchar(0,           "═════════════",        "", location.top, myGrayMedium)
+
+// ————— Plot columns with adjustments to show relative proportions when they will be stacked.
+color c_vnColor = displayDivInPane and priceVolDivUp ? colorDiv ? myColumnGreenDivD : myOrangeDarkDark : displayDivInPane and priceVolDivDn ? colorDiv ? myColumnRedDivD : myOrangeDarkDark : myGrayMedium
+color c_vsColor = displayDivInPane and priceVolDivUp ? colorDiv ? myColumnGreenDivD : myOrangeDark : displayDivInPane and priceVolDivDn ? colorDiv ? myColumnRedDivD : myOrangeDark : volUp <= volDn ? myColumnRedBright : myColumnRedDark
+color c_vbColor = displayColumns ? displayDivInPane and priceVolDivUp ? colorDiv ? myColumnGreenDivB : myOrangeSemiDark : displayDivInPane and priceVolDivDn ? colorDiv ? myColumnRedDivB : myOrangeSemiDark : volUp > volDn ? myColumnGreenBright : myColumnGreenDark : na
+//Top section (Neutral) = silver
+plot(okToPlot and displayColumns ? volTotal  : na, "Top section (Neutral)", c_vnColor, style = plot.style_columns)
+plot(okToPlot and displayColumns ? fakeVolDn : na, "Middle section (Sell)", c_vsColor, style = plot.style_columns, transp = 0)
+plot(okToPlot and displayColumns ? volUp     : na, "Bottom section (Buy)",  c_vbColor, style = plot.style_columns, transp = 0)
+plotchar(okToPlot ? volTotalMax : na, "Max Volume", "", location.top, myGreenRaw)
+
+// ————— Volume Balance MAs deltas.
+color c_vbMaColor = displayDivInPane and priceVolDiv ? myOrangeMedium : deltaVolMa > 0 ? displayColumns ? myGreenRaw : deltaVolMa > deltaVolMa[1] ? myGreenDarkDark : myGreenDarkDarkDark : displayColumns ? myRedRaw : deltaVolMa < deltaVolMa[1] ? myRedDarkDark : myRedDarkDarkDark
+plot(okToPlot and displayBalance ? deltaVolMa : na, "Volume Balance MAs Delta", c_vbMaColor, style = plot.style_area)
+plot(okToPlot and displayBalance and i_displayBalanceMa ? deltaVolMaMa : na, "MA of Volume Balance MAs Delta", myOrangeSemiDark)
+
+// ————— Total Volume MA and fill.
+p_volMaPlot = plot(okToPlot and i_showTotalVolumeMA and displayColumns ? volTotalMa : na, "Total Volume MA", myBlueDark)
+p_zeroPlot = plot(okToPlot and i_showTotalVolumeMA and displayColumns ? 0 : na, "Zero Line for MA Fill", invisible)
+fill(p_volMaPlot, p_zeroPlot, myOrangeDarkDark)
+
+// ————— Pressure Signal
+plotshape(i_showPressureSignal and rvol4 < sma2 and open < close, color = color.lime, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", transp=0, show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol4 < sma2 and open > close, color = color.maroon, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", transp=0, show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open < close, color = color.lime, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", transp=0, show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open > close, color = color.maroon, textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", transp=0, show_last=i_showLast)
+
+var table perfTable = table.new(position.top_right, 4, 5, border_width = 0)
+f_fillAverageVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + y
+	table.cell(_table, _column, _row, _cellText, text_color = color.blue)
+
+f_fillRelativeVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##")
+	table.cell(_table, _column, _row, _cellText, text_color = color.purple)
+
+f_fillPressureSignal(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + "%"
+	table.cell(_table, _column, _row, _cellText, text_color = percentup > percentdown ? color.teal : percentdown > percentup ? color.red : na)
+    table.cell_set_text_halign(perfTable, 2, 1, text.align_right)
+
+f_fillTotalVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + x
+	table.cell(_table, _column, _row, _cellText, text_color = close > open ? color.teal : color.red)
+
+f_fillBuyVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + x
+	table.cell(_table, _column, _row, _cellText, text_color = myGreenRaw)
+	
+f_fillSellVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + x
+	table.cell(_table, _column, _row, _cellText, text_color = myRedRaw)
+	
+f_fillNeutralVolume(_table, _column, _row, _value) =>
+	_cellText = tostring(_value, "#.##") + x
+	table.cell(_table, _column, _row, _cellText, text_color = myGrayMedium)
+
+if barstate.islast and barstate.isrealtime and i_showCurrentVolume
+    f_fillTotalVolume(perfTable,    0, 0, volSum)
+if barstate.islast and barstate.isrealtime and i_showAverageVolume
+	f_fillAverageVolume(perfTable,  1, 0, avg3)
+if barstate.islast and barstate.isrealtime and i_showRVOL
+	f_fillRelativeVolume(perfTable, 2, 0, rvol2)
+if barstate.islast and barstate.isrealtime and i_showPressurePer
+	f_fillPressureSignal(perfTable, 3, 0, percent)
