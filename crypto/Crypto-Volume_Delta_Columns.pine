@@ -1,25 +1,6 @@
 //@version=4
 //@author=trungnguyen
-
-// Delta Volume Columns [LucF]
-//  v7.0, 2021.04.17 18:49 — LucF
-
-// This indicator calculates delta volume derived from intrabar information on historical bars, and from tick data on realtime bars.
-// It can displays:
-//  - Stacked volume columns divided in neutral, buy and sell sections.
-//  - Volume balance as determined by the delta between the MAs of buy/sell volume.
-//  - Relative Delta Volume as determined by the portion of Buy/Sell values exceeding their respective MAs.
-//  - Divergences between price movement and buy/sell volume balance.
-//  - Non-repainting markers on different conditions, which can be used to trigger non-repainting alerts.
-
-// This code was written using:
-//  • Code borrowed from a comment by LucF to a Backtest Rookies presentation of an intrabar delta volume indicator here: https://backtest-rookies.com/2019/02/15/tradingview-volume-profile-with-lower-time-frame-data/
-//  • The PineCoders Coding Conventions for Pine: http://www.pinecoders.com/coding_conventions/
-//  • Functions published in "Using `varip` variables [PineCoders]": https://www.tradingview.com/script/ppQxBISk-Using-varip-variables-PineCoders/
-
-// This indicator's page on TV: https://www.tradingview.com/script/YFBNr8I6-Delta-Volume-Columns-LucF/
-
-study("Delta Volume Columns", "Delta Volume Columns", format = format.volume, max_labels_count = 500)
+study("Crypto - Delta Volume Columns", format = format.volume, max_labels_count = 500)
 
 // ———————————————————— Inputs
 // {
@@ -35,7 +16,7 @@ string  i_colorTheme          = input(TH2,    "Color Theme",                    
 string  i_displayMode         = input(DP2,    "Main Display",                               group = GP1, options = [DP1, DP2])
 bool    i_displayBalanceMa    = input(OFF,    "With Volume Balance: Display Its MA",        group = GP1, options = [OFF, ON]) == ON
 bool    i_showTotalVolumeMA   = input(ON,     "With Columns: Display Total Volume MA",      group = GP1, options = [OFF, ON]) == ON
-string  i_displayDivMode      = input(VD3,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
+string  i_displayDivMode      = input(VD2,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
 string  i_colorThemeDiv       = input(DC2,    "Color",                                      group = GP1, options = [DC1, DC2], tooltip = "'" + DC1 + "' only applies to chart bars and volume columns. '")
 bool    i_realtimeMode        = input(ON,     "Realtime Mode",                              group = GP1, options = [OFF, ON], tooltip = "Enables a distinct calculation mode which works only on realtime bars and uses price and volume differences between realtime bar updates to determine Buy/Sell/Neutral volume.") == ON
 bool    i_showPressureSignal  = input(ON,     "Show Pressure Signals",                      group = GP1, options = [OFF, ON]) == ON
@@ -48,7 +29,7 @@ string  i_itfTypeFixedRes     = input("15",   "",                               
 int     i_pressureLookBack    = input(17,     "Lookback bars for Pressure Percentage",      group = GP2)
 int     i_totalVolMaLength    = input(26,     "Total Volume MA Period",                     group = GP2)
 int     i_balanceMaLength     = input(65,     "Lookback bars for Average",                  group = GP2, tooltip = "The Buy and Sell volume MAs calculated using this period are the same MAs used in the 'Relative Delta Volume' calculations.")
-int     i_showLast            = input(200,    "Show Last",                                  group = GP2)
+int     i_showLast            = input(500,    "Show Last",                                  group = GP2)
 
 // ————— Input settings.
 bool colorThemeDark      = i_colorTheme == TH1
@@ -419,10 +400,10 @@ p_zeroPlot = plot(okToPlot and i_showTotalVolumeMA and displayColumns ? 0 : na, 
 fill(p_volMaPlot, p_zeroPlot, myOrangeDarkDark)
 
 // ————— Pressure Signal
-plotshape(i_showPressureSignal and rvol4 < sma2 and open < close , color = color.maroon, style = shape.diamond, location = location.bottom, title="Result<Effort", show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol4 < sma2 and open > close , color = color.lime, style = shape.diamond, location = location.bottom, title="Result<Effort", show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol3 > sma1 and open < close , color = color.purple , style = shape.cross, location = location.bottom, title="Bullish. R>E", show_last=i_showLast)
-plotshape(i_showPressureSignal and rvol3 > sma1 and open > close , color = color.aqua , style = shape.cross, location = location.bottom, title="Bearish. R<E", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol4 < sma2 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol4 < sma2 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
+plotshape(i_showPressureSignal and rvol3 > sma1 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
 
 var table perfTable = table.new(position.top_right, 4, 5, border_width = 0)
 f_fillAverageVolume(_table, _column, _row, _value) =>

@@ -2,12 +2,12 @@
 // trungnguyen
 
 //@version=4
-study("ADX MACD SAR")
+study("Crypto - ATR ADX MACD SAR")
 
 useCurrentRes = input(true, title="Use Current Chart Resolution?", group="Timeframe Setting")
 resCustom     = input("60",  "► Time frame", type = input.resolution, group="Timeframe Setting")
 res = useCurrentRes ? timeframe.period : resCustom
-showLast      = input(title="Show last", type=input.integer, defval=200, group="Common setting")
+showLast      = input(title="Show last", type=input.integer, defval=500, group="Common setting")
 
 // MACD
 fast_length   = input(title="Fast Length", type=input.integer, defval=12, group="MACD Setting")
@@ -20,6 +20,12 @@ sma_signal    = input(title="Signal Line MA Type", type=input.string, defval="SM
 // ADX DI
 length        = input(title="Length", type=input.integer, defval=17, group="ADX Setting")
 threshold     = input(title="Threshold", type=input.integer, defval=25, group="ADX Setting")
+
+// ATR
+Periods       = input(title="ATR Period", type=input.integer, defval=10, group="ATR Setting")
+srcATR        = input(hl2, title="Source", group="ATR Setting")
+Multiplier    = input(title="ATR Multiplier", type=input.float, step=0.1, defval=3.0)
+showsignals   = input(title="Show Buy/Sell Signals ?", type=input.bool, defval=true)
 
 //Calculating Parabolic SAR
 f_PSAR(_res) =>
@@ -68,29 +74,46 @@ signal = sma_signal == "SMA" ? sma(macd, signal_length) : ema(macd, signal_lengt
 outMacD = f_timeFrameResolutionInMinutes(res, macd)
 outSignal = f_timeFrameResolutionInMinutes(res, signal)
 macd_IsAbove = outMacD >= outSignal
-macd_color = macd_IsAbove ? color.lime : color.red
+macd_color = macd_IsAbove ? color.green : color.red
 circleYPosition = outSignal
+isMACD = cross(outMacD, outSignal)
 
-// show ADX DMI
-up = crossover(DIPlus,DIMinus) 
-down = crossunder(DIPlus,DIMinus) 
-bgcolor(up?color.green:na, title="Break Up Background", show_last=showLast)
-bgcolor(down?color.red:na, title="Break Down Background", show_last=showLast)
+// Calculating ATR
+atr= atr(Periods)
+up=src-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := close[1] > up1 ? max(up,up1) : up
+dn=src+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+// upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+buySignal = trend == 1 and trend[1] == -1
+// dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+sellSignal = trend == -1 and trend[1] == 1
 
-doubleUp = crossover(ADX,threshold) and crossover(DIPlus,DIMinus) 
-doubleDown = crossover(ADX,threshold) and crossunder(DIPlus,DIMinus) 
-plot(doubleUp ? threshold : na, style=plot.style_cross, color=color.lime, linewidth=3, show_last=showLast)
-plot(doubleDown ? threshold : na, style=plot.style_cross, color=color.maroon, linewidth=3, show_last=showLast)
-
+// print ADX DMI
 plot(DIPlus, color=color.green, title="DI+")
 plot(DIMinus, color=color.red, title="DI-")
 plot(ADX, color=color.navy, title="ADX")
 hline(threshold, color=color.black)
 hline(50, color=color.blue)
 
+// show DMI
+over = crossover(DIPlus,DIMinus) 
+under = crossunder(DIPlus,DIMinus) 
+bgcolor(over?color.green:na, title="DI+ Crossover Background", show_last=showLast)
+bgcolor(under?color.red:na, title="DI- Crossunder Background", show_last=showLast)
+
 // show MACD
-plot(cross(outMacD, outSignal) ? threshold : na, title="Cross", style=plot.style_cross, linewidth=4, color=macd_color, show_last=showLast, offset=-3)
+plotshape(isMACD ? threshold : na, title="MACD Cross", text="M", location=location.absolute, style=shape.labeldown, size=size.tiny, color=macd_color, textcolor=color.white, offset=-1, show_last=showLast)
 
 // show SAR
-plot(sarUp and showUp>showUp[1]? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colUp, show_last=showLast)
-plot(sarDown and showDown>showDown[1] ? 50 : na, title="Up Trending SAR", style=plot.style_circles, linewidth=4,color=colDown, show_last=showLast)
+plotshape(sarUp and showUp>showUp[1] ? 50 : na, title="SAR Buy", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(sarDown and showDown>showDown[1] ? 50 : na, title="SAR Sell", text="S", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)
+
+// show ATR
+plotshape(buySignal ? 50 : na, title="ATR Buy", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.green, 0), textcolor=color.white, show_last=showLast)
+plotshape(sellSignal ? 50 : na, title="ATR Sell", text="A", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.new(color.red, 0), textcolor=color.white, show_last=showLast)

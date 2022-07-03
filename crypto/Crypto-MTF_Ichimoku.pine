@@ -1,6 +1,6 @@
 // © trungnguyen
 //@version=4
-study("MTF Ichimoku Cloud", overlay=true)
+study("Crypto - MTF Ichimoku Cloud", overlay=true)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
@@ -8,7 +8,7 @@ study("MTF Ichimoku Cloud", overlay=true)
 
 C00 = "Original", C01 = "Aqua", C02 = "Black", C03 = "Blue", C04 = "Coral", C05 = "Gold", C06 = "Gray", C07 = "Green", C08 = "Lime", C09 = "Maroon", C10 = "Orange", C11 = "Pink", C12 = "Red", C13 = "Violet", C14 = "Yellow", C15 = "White"
 
-isActiveFirst              = input(false, "──────── First ichimoku ───────", group="Time Frame Configuration")
+isActiveFirst              = input(true, "──────── First ichimoku ───────", group="Time Frame Configuration")
 firstIchi                  = input("15",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveSecond             = input(false, "────── Second ichimoku ───────", group="Time Frame Configuration")
 secondIchi                 = input("60", "► Time frame", type = input.resolution, group="Time Frame Configuration")
@@ -79,15 +79,15 @@ timeOffset=time-time[1]
 // ————————————————————————————————————— FUNCTION  ——————————————————————————————————————
 // ——————————————————————————————————————————————————————————————————————————————————————
 // Show Bar
-previousHigh = highest(1)[1] 
-previousLow = lowest(1)[1]
-insideBarUp    = (high <= high[1] and low >= low[1] and close >= open)
-insideBarDown  = (high <= high[1] and low >= low[1] and open >= close) 
-outsideBarUp   = (high>high[1] and low<low[1]  and close>previousHigh)
-outsideBarDown = (high>high[1] and low<low[1] and close<previousLow)
+// previousHigh = highest(1)[1] 
+// previousLow = lowest(1)[1]
+// insideBarUp    = (high <= high[1] and low >= low[1] and close >= open)
+// insideBarDown  = (high <= high[1] and low >= low[1] and open >= close) 
+// outsideBarUp   = (high>high[1] and low<low[1]  and close>previousHigh)
+// outsideBarDown = (high>high[1] and low<low[1] and close<previousLow)
 
-barcolor(insideBarUp ? color.silver : outsideBarUp ? color.blue : close>open ? color.green : na)
-barcolor(insideBarDown ? color.silver : outsideBarDown ? color.blue : close<open ? color.red : na)
+// barcolor(insideBarUp ? color.silver : outsideBarUp ? color.blue : close>open ? color.green : na)
+// barcolor(insideBarDown ? color.silver : outsideBarDown ? color.blue : close<open ? color.red : na)
 
 // ————— Converts color choise
 f_stringInColor(_color) =>

@@ -1,5 +1,5 @@
 //@version=4
-study(title = "VPA + Ichimoku Signal", overlay = true)
+study(title = "Crypto - VPA + Ichimoku Signal", overlay = true)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————
@@ -8,8 +8,6 @@ showaosenbreak        = input(true, "Show Aosen Breakout Strategy", tooltip="Aos
 showkumobreak         = input(true, "Show Kumo Breakout Strategy", tooltip="Kumo Breakout", group="Ichimoku Signals")
 showchikouopen        = input(true, "CK Open Space Strategy", tooltip="Tenkan crossed Kijun + Chikou", group="Ichimoku Signals")
 showsput              = input(true, "Spring/Upthrust Strategy", tooltip="Tenkan1 < Kijun 1 and Tenkan1 > Kijun2", group="Ichimoku Signals")
-showkmck              = input(true, "Combination of Kumo+Chikou", tooltip="Combination of Kumo and Chikou Breakout", group="Ichimoku Signals")
-showeffortbreak       = input(true, "Combination of Kumo Breakout Effort", tooltip="Combination of Effort Up/Down and Kumo Breakout", group="Ichimoku Signals")
 showtkkjck            = input(true, "Combination of Tenkan+Kijun+Chikou", tooltip="Combination of Tenkan, Kijun and Chikou Cross", group="Ichimoku Signals")
 
 showsc                = input(true, "Show Selling Climax (SC)", tooltip="Selling Climax - End of Current Down Trend.", group="VSA Signals")
@@ -32,7 +30,7 @@ displacement          = input(26, minval=1, title="Displacement", group="Ichimok
 allowedDistance       = input(3, minval=1, title="Kijun ATR H4(%)")
 rsiLength             = input(14, minval=1, title="RSI Length")
 src                   = input(close, "Source", type = input.source)
-showLast              = input(title="Show last", type=input.integer, defval=100, group="Display")
+showLast              = input(title="Show last", type=input.integer, defval=500, group="Display")
 
 // Show Bar
 previousHigh = highest(1)[1] 
@@ -307,32 +305,10 @@ breakdownTF3 = crossunder(close, minThirdPresentSS) and red_candle
 buySP = ((firstTenkan<firstKijun and firstTenkan>secondKijun and low<secondKijun and close>secondKijun and not crossunder(close, maxPresentSS)) or (firstTenkan<firstKijun and firstTenkan>thirdKijun and low<thirdKijun and close>thirdKijun)) and not percentAboveKJH4 and (volpos < 4 or outsideBarUp) and not wideRangeBar[1] and avgSpreadBar and rsi>30
 sellUT = ((firstTenkan>firstKijun and firstTenkan<secondKijun and high>secondKijun and close<secondKijun) or (firstTenkan>firstKijun and firstTenkan<thirdKijun and high>thirdKijun and close<thirdKijun)) and not percentBelowKJH4 and (volpos < 4 or outsideBarDown) and not wideRangeBar[1] and avgSpreadBar and rsi<70
 
-//=========================================================================|
-//                    VSA SIGNAL                                           |
-//=========================================================================|
-//Effort to Move up Failed
-plotshape(showeuf ? effortUpfail and not UT : na, style=shape.circle, location=location.abovebar, color=color.maroon, text="EUF", editable=false, size=size.tiny, show_last=showLast) 
-//alertcondition(effortUpfail , title='Alert on EUF', message='Effort to Move up Failed. Bearish sign') 
-
-//Effort to Down Failed
-plotshape(showedf ? effortDownFail and ST and not percentBelowKJH4 : na, style=shape.circle, location=location.belowbar, color=color.navy, text="EDF", editable=false, size=size.tiny, show_last=showLast) 
-//alertcondition(effortDownFail , title='Alert on EDF', message='Effort to Down Failed. Bullish sign') 
-
-//=========================================================================|
-//                   VSA + ICHIMOKU SIGNAL                                 |
-//=========================================================================|
 // -----------------Tekan cross Kijun-----------------------
 tkCrossOverkj = crossover(firstTenkanOffset,secondKijunOffset) or crossover(firstTenkanOffset,firstKijunOffset)
 tkCrossUnderkj = crossunder(firstTenkanOffset,secondKijunOffset) or crossunder(firstTenkanOffset,firstKijunOffset)
 
-// -----------------Aosen-----------------------
-plotshape(showaosenbreak ? aosenUp and not breakup: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="AU", title="Aosen Breakout Upward", show_last=showLast)
-plotshape(showaosenbreak ? aosenDown and not breakdown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="AD", title="Aosen Breakout Downward", show_last=showLast)
-
-plotshape(showaosenbreak ? aosenUp and breakup: na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="AKBU", title="Aosen Breakout Upward", show_last=showLast)
-plotshape(showaosenbreak ? aosenDown and breakdown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="AKBD", title="Aosen Breakout Downward", show_last=showLast)
-
-// -----------------Kumo-----------------------
 // Kumo TF1
 bool buyKumo = na
 additionalLong = crossover(firstTenkanOffset,secondKijunOffset) or crossover(firstTenkanOffset,firstKijunOffset) or crossover(firstTenkanOffset,maxPresentSS) or not x2PercentAboveKJH4
@@ -347,11 +323,6 @@ if breakdown and (volpos < 4 or avgSpreadBar or downClose) and firstTenkan>minPr
 // Effort Up/Down
 effUp = effortUp and not ST and not buyCond and not effortDownFail and breakup
 effDown = effortDown and not effortUpfail and breakdown
-plotshape(showeu ? effUp and not buyKumo: na, style=shape.triangleup, location=location.belowbar, color=color.navy, text="EU", editable=false, size=size.tiny, show_last=showLast) 
-plotshape(showed ? effDown and not sellKumo : na, style=shape.triangledown, location=location.abovebar, color=color.maroon, text="ED", editable=false, size=size.tiny, show_last=showLast) 
-
-plotshape(showkumobreak ? buyKumo and not effUp and not aosenUp: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="BU", title="Kumo Breakout Upward", show_last=showLast)
-plotshape(showkumobreak ? sellKumo and not effDown and not aosenDown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="BD", title="Kumo Breakout Downward", show_last=showLast)
 
 // -----------------Chikou-----------------------
 maxSS     = max(leadSSA[25],leadSSB[25])
@@ -360,7 +331,6 @@ minSS     = min(leadSSA[25],leadSSB[25])
 bc = wideRangeBar and aboveClose and volume == highest(V,80) and upmajor==1 and close>thirdKijun and rsi>70 // Buying Climax
 // Selling Climax
 sc = wideRangeBar and belowClose and V == highest(V,60) and upmajor== -1 and low<thirdKijun and rsi<30 // Selling Climax
-//Stopping volume
 
 // Chikou Trends
 aboveCloud = close[25]>maxSS // Above Cloud
@@ -380,19 +350,52 @@ ckPlusBuyVPA = bc or UT
 if close>close[displacement-1] and ckPlusBuyVPA and close>thirdKijun
     chikouLostSell := (close-close[displacement-1])/close*100>allowedDistance*2
 
-plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.xcross, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
-plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.xcross, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
+//=========================================================================|
+//                    VSA SIGNAL                                           |
+//=========================================================================|
+//Effort to Move up/down Failed
+plotshape(showeuf ? effortUpfail and not UT : na, style=shape.circle, location=location.abovebar, color=color.maroon, text="EUF", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showedf ? effortDownFail and ST and not percentBelowKJH4 : na, style=shape.circle, location=location.belowbar, color=color.navy, text="EDF", editable=false, size=size.tiny, show_last=showLast) 
+//alertcondition(effortUpfail , title='Alert on EUF', message='Effort to Move up Failed. Bearish sign') 
+//alertcondition(effortDownFail , title='Alert on EDF', message='Effort to Down Failed. Bullish sign') 
+
+//Effort to Move up/down
+plotshape(showeu ? effUp and not buyKumo and not chikouOpenUp: na, style=shape.triangleup, location=location.belowbar, color=color.navy, text="EU", title="Effort Up",  editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showed ? effDown and not sellKumo and not chikouOpenDown: na, style=shape.triangledown, location=location.abovebar, color=color.maroon, text="ED", title="Effort Down", editable=false, size=size.tiny, show_last=showLast) 
+
+//=========================================================================|
+//                   VSA + ICHIMOKU SIGNAL                                 |
+//=========================================================================|
+// -----------------Aosen-----------------------
+plotshape(showaosenbreak ? aosenUp and not breakup : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="AU", title="Aosen Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak ? aosenDown and not breakdown : na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="AD", title="Aosen Breakout Downward", show_last=showLast)
+
+// -----------------Kumo-----------------------
+plotshape(showkumobreak ? buyKumo and not effUp and not aosenUp: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="BU", title="Kumo Breakout Upward", show_last=showLast)
+plotshape(showkumobreak ? sellKumo and not effDown and not aosenDown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="BD", title="Kumo Breakout Downward", show_last=showLast)
+
+//Combine aosen + kumo breakout
+plotshape(showaosenbreak and showkumobreak ? aosenUp and breakup: na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="AKBU", title="Aosen Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak and showkumobreak ? aosenDown and breakdown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="AKBD", title="Aosen Breakout Downward", show_last=showLast)
+
+//Chikou open space
+plotshape(showchikouopen ? chikouOpenUp and not tkCrossOverkj and not effortUp: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="OU", title="Chikou Open Space", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenDown and not tkCrossUnderkj and not effDown: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="OD", title="Chikou Open Space", show_last=showLast)
+
+//Chikou open space + Effort
+plotshape(showchikouopen ? chikouOpenUp and effortUp : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="EOU", title="Effort Chikou Open Space", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenDown and effDown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="EOD", title="Effort Chikou Open Space", show_last=showLast)
+
+//Chikou lost
+plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.diamond, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
+plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.diamond, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
 //alertcondition(buyKumo, title="Chikou breakout upward")
 //alertcondition(sellKumo, title="Chikou breakout downward")
 
-//Chikou open space
-plotshape(showchikouopen ? chikouOpenUp and not tkCrossOverkj: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="OU", title="Chikou Open Space", show_last=showLast)
-plotshape(showchikouopen ? chikouOpenDown and not tkCrossUnderkj: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="OD", title="Chikou Open Space", show_last=showLast)
-
 // Buying/Selling Climax, Stopping Volume
-plotshape(showbc ? bc and not UT and not chikouLostSell : na, "BC", style=shape.xcross, location=location.abovebar, color=color.maroon, text="BC", editable=false, size=size.tiny, show_last=showLast) 
-plotshape(showsc ? sc and not ST and not chikouLostBuy : na, "SC", style=shape.xcross, location=location.belowbar, color=color.navy, text="SC", editable=false, size=size.tiny, show_last=showLast) 
-plotshape(showsv ? stopVolume and not ST and low<thirdKijun and rsi<30 and not chikouLostBuy: na, "SV", style=shape.xcross, location=location.belowbar, color=color.navy, text="SV", editable=false, size=size.tiny, show_last=10) 
+plotshape(showbc ? bc and not UT and not chikouLostSell : na, "BC", style=shape.diamond, location=location.abovebar, color=color.maroon, text="BC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsc ? sc and not ST and not chikouLostBuy : na, "SC", style=shape.diamond, location=location.belowbar, color=color.navy, text="SC", editable=false, size=size.tiny, show_last=showLast) 
+plotshape(showsv ? stopVolume and not ST and low<thirdKijun and rsi<30 and not chikouLostBuy: na, "SV", style=shape.diamond, location=location.belowbar, color=color.navy, text="SV", editable=false, size=size.tiny, show_last=10) 
 
 // -----------------Spring-----------------------
 plotshape(showsput ? buySP and not chikouLostBuy : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="SP", title="Spring", show_last=showLast)
@@ -400,16 +403,15 @@ plotshape(showsput ? sellUT and not chikouLostSell : na, color=color.maroon, sty
 //alertcondition(buySP, title="Spring")
 //alertcondition(sellUT, title="Upthrust")
 
-
 // Combine chikou open space + 1st kumo breakout
-plotshape(showkmck and showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)
-plotshape(showkmck and showchikouopen and showkumobreak ? sellKumo and chikouOpenDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KCBD", title="Ichi 1stKumo/Chikou Breakout Downward", show_last=showLast)
+plotshape(showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)
+plotshape(showchikouopen and showkumobreak ? sellKumo and chikouOpenDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KCBD", title="Ichi 1stKumo/Chikou Breakout Downward", show_last=showLast)
 alertcondition(buyKumo and chikouOpenUp, title="Kumo Breakout and Chikou Open Up")
 alertcondition(sellKumo and chikouOpenDown, title="Kumo Breakout and Chikou Open Down")
 
 // Combine kumo breakout + effort up/down
-plotshape(showeffortbreak and showeu and showkumobreak ? buyKumo and effUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="EKBU", title="Effort Kumo Breakout Upward", show_last=showLast)
-plotshape(showeffortbreak and showed and showkumobreak ? sellKumo and effDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="EKBD", title="Effort Kumo Breakout Downward", show_last=showLast)
+plotshape(showeu and showkumobreak ? buyKumo and effUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="EKBU", title="Effort Kumo Breakout Upward", show_last=showLast)
+plotshape(showed and showkumobreak ? sellKumo and effDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="EKBD", title="Effort Kumo Breakout Downward", show_last=showLast)
 alertcondition(buyKumo and effUp, title="Kumo Breakout and Effort Up")
 alertcondition(sellKumo and effDown, title="Kumo Breakout and Effort Down")
 

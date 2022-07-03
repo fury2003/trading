@@ -1,5 +1,5 @@
 //@version=4
-study("MTF Ichimoku Line", overlay=true)
+study("Crypto - MTF Ichimoku Line", overlay=true)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— CONFIGURATION  ———————————————————————————————————

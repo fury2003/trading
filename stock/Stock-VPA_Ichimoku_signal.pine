@@ -25,7 +25,7 @@ conversionPeriods     = input(9, minval=1,  title="Conversion Line Periods", gro
 laggingSpan2Periods   = input(52, minval=1, title="Lagging Span 2 Length", group="Ichimoku Setting")
 displacement          = input(26, minval=1, title="Displacement", group="Ichimoku Setting")
 allowedDistance       = input(5, minval=1, title="Kijun ATR H4(%)")
-showLast              = input(title="Show last", type=input.integer, defval=1000, group="Display")
+showLast              = input(title="Show last", type=input.integer, defval=500, group="Display")
 
 // Show Bar
 previousHigh = highest(1)[1] 

@@ -1,9 +1,9 @@
 //@version=5
-indicator(title="Ichimoku Future", shorttitle="Ichi future", overlay=true)
+indicator(title="Crypto - Ichimoku Future", overlay=true)
 
 // ichi past line
 isActiveKumo = input.bool(true, "Show Kumo", group="Display")
-isActive26   = input.bool(false, "Show 26", group="Display")
+isActive26   = input.bool(true, "Show 26", group="Display")
 isActive65   = input.bool(false, "Show 65", group="Display")
 isActive129  = input.bool(true, "Show 129", group="Display")
 isActive234  = input.bool(true, "Show 234", group="Display")
