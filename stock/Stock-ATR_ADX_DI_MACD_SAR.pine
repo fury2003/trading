@@ -2,7 +2,7 @@
 // trungnguyen
 
 //@version=4
-study("Stock - ATR ADX MACD SAR", overlay=true)
+study("Stock - ATR ADX MACD SAR")
 
 useCurrentRes = input(false, title="Use Current Chart Resolution?", group="Timeframe Setting")
 resCustom     = input("3D",  "► Time frame", type = input.resolution, group="Timeframe Setting")
