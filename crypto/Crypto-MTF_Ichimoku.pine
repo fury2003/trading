@@ -9,19 +9,20 @@ study("Crypto - MTF Ichimoku Cloud", overlay=true)
 C00 = "Original", C01 = "Aqua", C02 = "Black", C03 = "Blue", C04 = "Coral", C05 = "Gold", C06 = "Gray", C07 = "Green", C08 = "Lime", C09 = "Maroon", C10 = "Orange", C11 = "Pink", C12 = "Red", C13 = "Violet", C14 = "Yellow", C15 = "White"
 
 isActiveFirst              = input(true, "──────── First ichimoku ───────", group="Time Frame Configuration")
-firstIchi                  = input("15",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+firstIchi                  = input("5",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveSecond             = input(false, "────── Second ichimoku ───────", group="Time Frame Configuration")
-secondIchi                 = input("60", "► Time frame", type = input.resolution, group="Time Frame Configuration")
+secondIchi                 = input("15", "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveThird              = input(false, "─────── Third ichimoku ────────", group="Time Frame Configuration")
-thirdIchi                  = input("240",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+thirdIchi                  = input("60",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveFourth             = input(false, "─────── Fourth ichimoku ───────", group="Time Frame Configuration")
-fourthIchi                 = input("1D",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
+fourthIchi                 = input("240",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveFirstTenkan        = input(true,  "Tenkan TF1", group="Show Ichimoku")
-isActiveAosen              = input(true,  "Aosen TF1", group="Show Ichimoku")
+isActiveFirstAosen         = input(true,  "Aosen TF1", group="Show Ichimoku")
 isActiveFirstKijun         = input(false,  "Kijun TF1", group="Show Ichimoku")
 isActiveFirstChikou        = input(true,  "Chikou TF1", group="Show Ichimoku")
 isActiveFirstKumo          = input(true,  "Kumo TF1", group="Show Ichimoku")
 isActiveSecondTenkan       = input(false,  "Tenkan TF2", group="Show Ichimoku")
+isActiveSecondAosen        = input(true,  "Aosen TF2", group="Show Ichimoku")
 isActiveSecondKijun        = input(false,  "Kijun TF2", group="Show Ichimoku")
 isActiveSecondChikou       = input(false,  "Chikou TF2", group="Show Ichimoku")
 isActiveSecondKumo         = input(true,   "Kumo TF2", group="Show Ichimoku")
@@ -214,11 +215,11 @@ fill(ssaFirst, ssbFirst, color.new(isActiveMonoKumo ? colorDarkBlue : (firstSSA 
 
 // ————— Aosen
 // ————— 9
-a1 =  plot(isActiveAosen ? firstTenkan : na, color=colorLightBlue, title="First Tenkan", linewidth=1)
+asa1 =  plot(isActiveFirstAosen ? firstTenkan : na, color=colorLightBlue, title="First Tenkan", linewidth=1)
 // ————— 26
-a2 =  plot(isActiveAosen ? firstKijun : na, color=color.red, title="First Kijun", linewidth=1)
+asb1 =  plot(isActiveFirstAosen ? firstKijun : na, color=color.red, title="First Kijun", linewidth=1)
 // ao sen
-fill(a1, a2, color = firstTenkan > firstKijun ? color.new(colorSkin, transp=transp) : color.new(colorSkin, transp=transp))
+fill(asa1, asb1, color = firstTenkan > firstKijun ? color.new(colorSkin, transp=transp) : color.new(colorSkin, transp=transp))
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— SECOND ICHIMOKU  —————————————————————————————————
@@ -237,6 +238,14 @@ plot(isActiveSecondChikou ? secondChikou : na, offset = -secondDisplacement, col
 ssaSecond=plot(isActiveSecondKumo ? secondSSA : na, offset = secondDisplacement, color=colorLightGreen, title="Second SSA", linewidth=1)
 ssbSecond=plot(isActiveSecondKumo ? secondSSB : na, offset = secondDisplacement, color=colorLightGreen, title="Second SSB", linewidth=1)
 fill(ssaSecond, ssbSecond, color.new(isActiveMonoKumo ? colorDarkGreen : (secondSSA > secondSSB ? colorVeryLightGreen : colorDarkGreen), transp=transp), title="Second Kumo")
+
+// ————— Aosen
+// ————— 9
+asa2 =  plot(isActiveSecondAosen ? secondTenkan : na, color=colorLightGreen, title="Second Tenkan", linewidth=1)
+// ————— 26
+asb2 =  plot(isActiveSecondAosen ? secondKijun : na, color=color.red, title="Second Kijun", linewidth=1)
+// ao sen
+fill(asa2, asb2, color = secondTenkan > secondKijun ? color.new(colorSkin, transp=transp) : color.new(colorSkin, transp=transp))
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— THIRD ICHIMOKU  ——————————————————————————————————

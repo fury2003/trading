@@ -157,16 +157,9 @@ aboveCloud = close[25]>maxSS // Above Cloud
 belowCloud = close[25]<minSS // Below Cloud
 notrend    = maxSS>=close[25] and close[25]>=minSS //choppy trading - the price is in Cloud
 
-// Chikou Lost Home
+// Chikou signal
 chikouOpenUp   = crossover(close,maxSS) and close>close[25] and close>high[1]
 chikouOpenDown = crossunder(close,minSS) and close<close[25] and close<low[1]
-bool chikouLostBuy = na
-if close<close[displacement-1] and close<firstKijun
-    chikouLostBuy := (close[displacement-1]-close)/close*100>allowedDistance*2
-
-bool chikouLostSell = na
-if close>close[displacement-1] and close>firstKijun
-    chikouLostSell := (close-close[displacement-1])/close*100>allowedDistance*2
 
 // Tenkan cross Kijun
 // -----------------Tekan cross Kijun-----------------------
@@ -203,10 +196,6 @@ plotshape(showchikouopen ? chikouOpenDown and not aosenDown and not sellKumo and
 // Combine aosen breakout + Chikou free
 plotshape(showaosenbreak and showchikouopen? aosenUp and chikouOpenUp : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="ACBU", title="Aosen Chikou Breakout Upward", show_last=showLast)
 plotshape(showaosenbreak and showchikouopen ? aosenDown and chikouOpenDown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="ACBD", title="Aosen Chikou Breakout Downward", show_last=showLast)
-
-//Chikou lost home
-plotshape(showchikouopen ? chikouLostBuy : na, color=color.navy, style=shape.diamond, location=location.belowbar, size=size.tiny, text="CLB", title="Chikou Lost Buy", show_last=showLast)
-plotshape(showchikouopen ? chikouLostSell: na, color=color.maroon, style=shape.diamond, location=location.abovebar, size=size.tiny, text="CLS", title="Chikou Lost Sell", show_last=showLast)
 
 // Combine chikou open space + kumo breakout
 plotshape(showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)

@@ -16,11 +16,11 @@ thirdIchi                  = input("240",  "► Time frame", type = input.reso
 isActiveFourth             = input(false, "─────── Fourth ichimoku ───────", group="Time Frame Configuration")
 fourthIchi                 = input("1D",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveFirst26            = input(true,  "26 - TF1", group="Show Ichimoku Line")
-isActiveFirst65            = input(false,  "65 - TF1", group="Show Ichimoku Line")
+isActiveFirst65            = input(true,  "65 - TF1", group="Show Ichimoku Line")
 isActiveFirst129           = input(true,  "129 - TF1", group="Show Ichimoku Line")
-isActiveFirst234           = input(false,  "234 - TF1", group="Show Ichimoku Line")
+isActiveFirst234           = input(true,  "234 - TF1", group="Show Ichimoku Line")
 isActiveSecond26           = input(true,  "26 - TF2", group="Show Ichimoku Line")
-isActiveSecond65           = input(false,  "65 - TF2", group="Show Ichimoku Line")
+isActiveSecond65           = input(true,  "65 - TF2", group="Show Ichimoku Line")
 isActiveSecond129          = input(true,  "129 - TF2", group="Show Ichimoku Line")
 isActiveSecond234          = input(false,  "234 - TF2", group="Show Ichimoku Line")
 isActiveThird26            = input(true,  "26 - TF3", group="Show Ichimoku Line")
@@ -128,25 +128,25 @@ f_getKijunText(_res, _isAbbreviation) =>
 f_get26Text(_res, _isAbbreviation) =>
     // _res: resolution of any TF (in "timeframe.period" string format).
     tf = f_resolutionInString(_res)
-    _isAbbreviation ? "26" + tf  : "26" + tf
+    _isAbbreviation ? "26"  : "26" + tf
 
 // ————— Returns the 65 text
 f_get65Text(_res, _isAbbreviation) =>
     // _res: resolution of any TF (in "timeframe.period" string format).
     tf = f_resolutionInString(_res)
-    _isAbbreviation ? "65" + tf  : "65" + tf
+    _isAbbreviation ? "65"  : "65" + tf
 
 // ————— Returns the 129 text
 f_get129Text(_res, _isAbbreviation) =>
     // _res: resolution of any TF (in "timeframe.period" string format).
     tf = f_resolutionInString(_res)
-    _isAbbreviation ? "129" + tf  : "129" + tf
+    _isAbbreviation ? "129"  : "129" + tf
 
 // ————— Returns the 234 text
 f_get234Text(_res, _isAbbreviation) =>
     // _res: resolution of any TF (in "timeframe.period" string format).
     tf = f_resolutionInString(_res)
-    _isAbbreviation ? "234" + tf  : "234" + tf
+    _isAbbreviation ? "234" : "234" + tf
 
 
 // ————— Converts current "timeframe.multiplier" plus the TF into minutes of type float.
