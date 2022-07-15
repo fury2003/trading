@@ -10,6 +10,8 @@ stzfb                 = input(true, title="Show Tension zone false break?")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
 ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
 scb                   = input(true, title="Show Channel Break Out?")
+snr7                  = input(true, title="Show NR7?")
+snr7f                 = input(true, title="Show NR7 False-break?")
 pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
 pblb                  = input(2, minval=1, maxval=100, title="Pin Bars Look Back Period To Define The Trend of Highs and Lows")
 insideBarMinSpread    = input(40, minval=1, maxval=99, title="Tension Zone. Percentage Input For First Inside Bar. What % The Wick Of Candle Has To Be Compared To Mother Bar")
@@ -45,7 +47,7 @@ blackBody = open > close
 // my definition
 // doji       = spread < hlRange/4.5
 bigBodyBar     = spread > hlRange*0.7
-averageBodyBar = spread > hlRange*0.4
+averageBodyBar = spread > hlRange*0.5
 smallBodyBar   = spread > hlRange*0.3
 
 // Marubozu
@@ -236,7 +238,11 @@ threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and t
 //=========================================================================|
 //                     RASING/FAILLING THREE                               | 
 //=========================================================================|
-//Rising three | Mother maru green - green/red - green/red - green/red - Maru green
+// It occurs during an Uptrend;
+// The First and Fifth Candle are white and are longer than the other Three Candles of the Pattern
+// The Second, Third and Fourth Candle are fully contained within the Real Body of the First Candle
+// The Close of the Fifth Candle is above the Close of the First Candle
+// Rising three | Mother maru green - green/red - green/red - green/red - Maru green
 bool rising3_firstBar  = false
 bool rising3_secondBar = false
 bool rising3_thirdBar  = false
@@ -244,15 +250,15 @@ bool rising3_fourthBar = false
 bool rising3_fifthBar  = false
 
 if close[4] > open[4]
-    rising3_firstBar := bigBodyBar[4] 
+    rising3_firstBar := averageBodyBar[4] 
 
-if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4]
+if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4] and high[3] < high[4] and low[3] > low[4]
     rising3_secondBar := (high[3] - low[3]) >= ((close[4] - open[4])*minSpreadInsideBar)
 
-if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4]
+if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4] and high[2] < high[4] and low[2] > low[4]
     rising3_thirdBar := true
 
-if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4]
+if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4] and high[1] < high[4] and low[1] > low[4]
     rising3_fourthBar := true
 
 if close > close[4] 
@@ -268,15 +274,15 @@ bool failling3_fourthBar   = false
 bool failling3_fifthBar    = false
 
 if close[4] < open[4]
-    failling3_firstBar := bigBodyBar[4]
+    failling3_firstBar := averageBodyBar[4]
 
-if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4]
+if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4] and high[3] < high[4] and low[3] > low[4]
     failling3_secondBar := (high[3] - low[3]) >= ((open[4] - close[4])*minSpreadInsideBar)
 
-if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4]
+if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] and high[2] < high[4] and low[2] > low[4]
     failling3_thirdBar := true
 
-if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4]
+if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] and high[1] < high[4] and low[1] > low[4]
     failling3_fourthBar := true
 
 if close < close[4]
@@ -296,18 +302,18 @@ bool rising3fb_fifthBar    = false
 bool rising3fb_reverseBar  = false
 
 if close[5] > open[5]
-    rising3fb_firstBar := bigBodyBar[5] 
+    rising3fb_firstBar := averageBodyBar[5] 
 
-if close[4] <= close[5] and close[4] >= open[5] and open[4] <= close[5]
+if close[4] <= close[5] and close[4] >= open[5] and open[4] <= close[5] and high[4] < high[5] and low[4] > low[5]
     rising3fb_secondBar := (high[4] - low[4]) >= ((close[5] - open[5])*minSpreadInsideBar)
-
-if close[3]>=open[5] and open[3] <= close[5] and close[3]<=close[5]
+    
+if close[3]>=open[5] and open[3] <= close[5] and close[3]<=close[5] and high[3] < high[5] and low[3] > low[5]
     rising3fb_thirdBar := true
 
-if close[2]>=open[5] and open[2] <= close[5] and close[2]<=close[5]
+if close[2]>=open[5] and open[2] <= close[5] and close[2]<=close[5] and high[2] < high[5] and low[2] > low[5]
     rising3fb_fourthBar := true
 
-if close[1] >= close[5]
+if close[1] >= close[5] 
     rising3fb_fifthBar := true
 
 if bearishPiercing() or bearishEngulfing()
@@ -324,15 +330,15 @@ bool failling3fb_fifthBar     = false
 bool failling3fb_reverseBar   = false
 
 if close[5] < open[5]
-    failling3fb_firstBar := bigBodyBar[5]
+    failling3fb_firstBar := averageBodyBar[5]
 
-if  close[4] >= close[5] and close[4] <= open[5] and open[4] >= close[5]
+if  close[4] >= close[5] and close[4] <= open[5] and open[4] >= close[5] and high[4] < high[5] and low[4] > low[5]
     failling3fb_secondBar := (high[4] - low[4]) >= ((open[5] - close[5])*minSpreadInsideBar)
 
-if close[3] >= close[5] and close[3] <= open[5] and open[3] >= close[5]
+if close[3] >= close[5] and close[3] <= open[5] and open[3] >= close[5] and high[3] < high[5] and low[3] > low[5]
     failling3fb_thirdBar := true
 
-if close[2] >= close[5] and close[2] <= open[5] and open[2] >= close[5]
+if close[2] >= close[5] and close[2] <= open[5] and open[2] >= close[5] and high[2] < high[5] and low[2] > low[5]
     failling3fb_fourthBar := true
 
 if close[1] <= close[5]
@@ -487,6 +493,95 @@ fakeyDown4_firstGreenBar()   => close[1] >= open[1] ? 1 : 0
 fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and bullishPinbar() ? 1 : 0
 fakey_down4 = sfk and fakeyDown4_secondGreenBar() and fakeyDown4_firstGreenBar() and fakeyDown4_hammerBar() 
 
+//=========================================================================|
+//                     NR7 PATERN                                          | 
+//=========================================================================|
+//This bar pattern requires seven bars.
+bool nr7_sixthBar     = false
+bool nr7_fifthBar     = false
+bool nr7_fourthBar    = false
+bool nr7_thirdBar     = false
+bool nr7_secondBar    = false
+bool nr7_firstBar     = false
+
+f_NR7(insideBar_index, motherBar_index) =>
+	_isUp               = close[motherBar_index] > open[motherBar_index]
+	_insideBar          = _isUp ? close[insideBar_index] <= close[motherBar_index] and close[insideBar_index] >= open[motherBar_index] : close[insideBar_index] >= close[motherBar_index] and close[insideBar_index] <= open[motherBar_index]
+    [_insideBar]
+
+[nr7_fifthInsideBar]  = f_NR7(5, 6)
+[nr7_fourthInsideBar] = f_NR7(4, 6)
+[nr7_thirdInsideBar]  = f_NR7(3, 6)
+[nr7_secondInsideBar] = f_NR7(2, 6)
+[nr7_firstInsideBar]  = f_NR7(1, 6)
+
+if averageBodyBar[6]
+    nr7_sixthBar := true
+
+if  nr7_fifthInsideBar
+    nr7_fifthBar := true
+
+if nr7_fourthInsideBar
+    nr7_fourthBar := true
+
+if nr7_thirdInsideBar
+    nr7_thirdBar := true
+
+if nr7_secondInsideBar
+    nr7_secondBar := true
+
+if nr7_firstInsideBar
+    nr7_firstBar := true
+
+nr7() => snr7 and nr7_sixthBar and nr7_fifthBar and nr7_fourthBar and nr7_thirdBar and nr7_secondBar and nr7_firstBar
+
+//=========================================================================|
+//                     NR7 FALSE BREAK                                     | 
+//=========================================================================|
+bool nr7f_seventhBar        = false
+bool nr7f_sixthBar          = false
+bool nr7f_fifthBar          = false
+bool nr7f_fourthBar         = false
+bool nr7f_thirdBar          = false
+bool nr7f_secondBar         = false
+bool nr7f_firstBar          = false
+bool nr7f_reverseBar        = false
+
+[nr7f_sixthInsideBar]   = f_NR7(6, 7)
+[nr7f_fifthInsideBar]   = f_NR7(5, 7)
+[nr7f_fourthInsideBar]  = f_NR7(4, 7)
+[nr7f_thirdInsideBar]   = f_NR7(3, 7)
+[nr7f_secondInsideBar]  = f_NR7(2, 7)
+
+if averageBodyBar[7]
+    nr7f_seventhBar := true
+
+if nr7f_sixthInsideBar
+    nr7f_sixthBar := true
+
+if nr7f_fifthInsideBar
+    nr7f_fifthBar := true
+
+if nr7f_fourthInsideBar
+    nr7f_fourthBar := true
+
+if nr7f_thirdInsideBar
+    nr7f_thirdBar := true
+
+if nr7f_secondInsideBar
+    nr7f_secondBar := true
+
+// if ??
+//     nr7f_firstBar := true
+
+if close[1] > open[1] and (bearishPiercing() or bearishEngulfing() or bearishOutsideBar())
+    nr7f_reverseBar := true
+
+if close[1] < open[1] and (bullishPiercing() or bullishEngulfing() or bullishOutsideBar())
+    nr7f_reverseBar := true
+
+nr7f() => snr7 and nr7f_seventhBar and nr7f_sixthBar and nr7f_fifthBar and nr7f_fourthBar and nr7f_thirdBar and nr7f_secondBar and nr7f_reverseBar
+
 //------------------------------------------------------------------------------
 // Tension zone
 barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
@@ -522,3 +617,6 @@ barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
 // Channel break
 barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yellow : na)
 
+// NR7
+barcolor(nr7() ? color.yellow : na)
+barcolor(nr7f() ? color.orange : na)

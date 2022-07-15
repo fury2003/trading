@@ -31,11 +31,11 @@ isActiveFourth26           = input(true,  "26 - TF4", group="Show Ichimoku Line"
 isActiveFourth65           = input(false,  "65 - TF4", group="Show Ichimoku Line")
 isActiveFourth129          = input(false,  "129 - TF4", group="Show Ichimoku Line")
 isActiveFourth234          = input(false,  "234 - TF4", group="Show Ichimoku Line")
-conversionPeriods          = input(9, minval=1,  title="Conversion Line Periods", group="Ichimoku Setting"),
-basePeriods                = input(26, minval=1, title="Base Line Periods", group="Ichimoku Setting")
-averagePeriods             = input(65, minval=1, title="65 Length Line Periods", group="Ichimoku Setting")
-lengthPeriods              = input(129, minval=1, title="129 Length Line Periods", group="Ichimoku Setting")
-maxLengthPeriods           = input(234, minval=1, title="234 Length Line Periods", group="Ichimoku Setting")
+conversionPeriods          = input(9, minval=1,  title="Kihon Suchi Series", group="Ichimoku Setting"),
+basePeriods                = input(26, minval=1, title="Kihon Suchi Series", group="Ichimoku Setting")
+averagePeriods             = input(65, minval=1, title="Kihon Suchi Series", group="Ichimoku Setting")
+lengthPeriods              = input(129, minval=1, title="Kihon Suchi Series", group="Ichimoku Setting")
+maxLengthPeriods           = input(234, minval=1, title="Kihon Suchi Series", group="Ichimoku Setting")
 isActiveLabel              = input(true,  "Label  ──────────────", group="Color Setting")
 labelOffset                = input(4,     "    ▪ Offset", minval = -20, maxval = 20, group="Color Setting")
 labelColor                 = input(C00,   "    ▪ Color", options = [C00, C01, C02, C03, C04, C05, C06, C07, C08, C09, C10, C11, C12, C13, C14, C15], group="Color Setting")
@@ -194,13 +194,13 @@ f_ichimokuData(_isActive, _tf) =>
 [first26, first65, first129, first234] = f_ichimokuData(isActiveFirst, firstIchi)
 
 // ————— 26
-plot(isActiveFirst26 ? first26 : na, color=colorVeryLightBlue, title="First 26", linewidth=1, show_last=1000)
+plot(isActiveFirst26 ? first26 : na, color=colorVeryLightBlue, title="First 26", linewidth=1, show_last=2000)
 // ————— 65
-plot(isActiveFirst65 ? first65 : na, color=colorLightBlue, title="First 65", linewidth=1, show_last=1000)
+plot(isActiveFirst65 ? first65 : na, color=colorLightBlue, title="First 65", linewidth=1, show_last=2000)
 // ————— 129
-plot(isActiveFirst129 ? first129 : na, color=colorDarkBlue, title="First 129", linewidth=1, show_last=1000)
+plot(isActiveFirst129 ? first129 : na, color=colorDarkBlue, title="First 129", linewidth=1, show_last=2000)
 // ————— 234
-plot(isActiveFirst234 ? first234 : na, color=colorDarkBlue, title="First 234", linewidth=1, show_last=1000)
+plot(isActiveFirst234 ? first234 : na, color=colorDarkBlue, title="First 234", linewidth=1, show_last=2000)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— SECOND ICHIMOKU  —————————————————————————————————
@@ -209,13 +209,13 @@ plot(isActiveFirst234 ? first234 : na, color=colorDarkBlue, title="First 234", l
 [second26, second65, second129, second234] = f_ichimokuData(isActiveSecond, secondIchi)
 
 // ————— 26
-plot(isActiveSecond26 ? second26 : na, color=colorVeryLightGreen, title="Second 26", linewidth=1, show_last=1000)
+plot(isActiveSecond26 ? second26 : na, color=colorVeryLightGreen, title="Second 26", linewidth=1, show_last=2000)
 // ————— 65
-plot(isActiveSecond65 ? second65 : na, color=colorLightGreen, title="Second 65", linewidth=1, show_last=1000)
+plot(isActiveSecond65 ? second65 : na, color=colorLightGreen, title="Second 65", linewidth=1, show_last=2000)
 // ————— 129
-plot(isActiveSecond129 ? second129 : na, color=colorDarkGreen, title="Second 129", linewidth=1, show_last=1000)
+plot(isActiveSecond129 ? second129 : na, color=colorDarkGreen, title="Second 129", linewidth=1, show_last=2000)
 // ————— 234
-plot(isActiveSecond234 ? second234 : na, color=colorDarkGreen, title="Second 234", linewidth=1, show_last=1000)
+plot(isActiveSecond234 ? second234 : na, color=colorDarkGreen, title="Second 234", linewidth=1, show_last=2000)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— THIRD ICHIMOKU  ——————————————————————————————————
@@ -224,13 +224,13 @@ plot(isActiveSecond234 ? second234 : na, color=colorDarkGreen, title="Second 234
 [third26, third65, third129, third234] = f_ichimokuData(isActiveThird, thirdIchi)
 
 // ————— 26
-plot(isActiveThird26 ? third26 : na, color=colorVeryLightPink, title="Third 26", linewidth=1)
+plot(isActiveThird26 ? third26 : na, color=colorVeryLightPink, title="Third 26", linewidth=1, show_last=2000)
 // ————— 65
-plot(isActiveThird65 ? third65 : na, color=colorLightPink, title="Third 65", linewidth=1)
+plot(isActiveThird65 ? third65 : na, color=colorLightPink, title="Third 65", linewidth=1, show_last=2000)
 // ————— 129
-plot(isActiveThird129 ? third129 : na, color=colorDarkPink, title="Third 129", linewidth=1)
+plot(isActiveThird129 ? third129 : na, color=colorDarkPink, title="Third 129", linewidth=1, show_last=2000)
 // ————— 234
-plot(isActiveThird234 ? third234 : na, color=colorDarkPink, title="Third 234", linewidth=1)
+plot(isActiveThird234 ? third234 : na, color=colorDarkPink, title="Third 234", linewidth=1, show_last=2000)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ————————————————————————————————— FOURTH ICHIMOKU  ———————————————————————————————————
@@ -239,13 +239,13 @@ plot(isActiveThird234 ? third234 : na, color=colorDarkPink, title="Third 234", l
 [fourth26, fourth65, fourth129, fourth234] = f_ichimokuData(isActiveFourth, fourthIchi)
 
 // ————— 26
-plot(isActiveFourth26 ? fourth26 : na, color=colorVeryLightOrange, title="Fourth 26", linewidth=1)
+plot(isActiveFourth26 ? fourth26 : na, color=colorVeryLightOrange, title="Fourth 26", linewidth=1, show_last=2000)
 // ————— 65
-plot(isActiveFourth65 ? fourth65 : na, color=colorLightOrange, title="Fourth 65", linewidth=1)
+plot(isActiveFourth65 ? fourth65 : na, color=colorLightOrange, title="Fourth 65", linewidth=1, show_last=2000)
 // ————— 129
-plot(isActiveFourth129 ? fourth129 : na, color=colorDarkOrange, title="Fourth 129", linewidth=1)
+plot(isActiveFourth129 ? fourth129 : na, color=colorDarkOrange, title="Fourth 129", linewidth=1, show_last=2000)
 // ————— 234
-plot(isActiveFourth234 ? fourth234 : na, color=colorDarkOrange, title="Fourth 234", linewidth=1)
+plot(isActiveFourth234 ? fourth234 : na, color=colorDarkOrange, title="Fourth 234", linewidth=1, show_last=2000)
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————————— LABEL ————————————————————————————————————————
