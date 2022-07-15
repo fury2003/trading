@@ -214,8 +214,8 @@ f_ichimokuData_Offset(_tf) =>
 twistUp = crossover(sspanA, sspanB)
 twistDown = crossunder(sspanA, sspanB)
 // -----------------break out aosen -----------------------
-aosenUp = crossover(close,maxAosen) and not narrowRangeBar and (aboveClose or upClose)
-aosenDown = crossunder(close,minAosen) and not narrowRangeBar and (belowClose or downClose)
+aosenUp = crossover(close,maxAosen) and (aboveClose or upClose)
+aosenDown = crossunder(close,minAosen) and (belowClose or downClose)
 
 // -----------------break out cloud - TF1-----------------------
 leadSSA = sspanA[displacement - 1]
