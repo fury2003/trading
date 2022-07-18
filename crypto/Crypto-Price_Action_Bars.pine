@@ -14,6 +14,7 @@ snr7                  = input(true, title="Show NR7?")
 snr7f                 = input(true, title="Show NR7 False-break?")
 senf                  = input(true, title="Show Engulfing Bar?")
 skgr                  = input(true, title="Show Kangaroo Tail?")
+sms                   = input(true, title="Show Morning/Evening Star?")
 pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
 pblb                  = input(2, minval=1, maxval=100, title="Pin Bars Look Back Period To Define The Trend of Highs and Lows")
 eav                   = input(7, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
@@ -63,7 +64,9 @@ f_isHighest(start_index, end_index) =>
 	_isHighestHigh = isHighestHigh
     [_isHighestHigh]
 
-// doji       = spread < hlRange/4.5
+highestBarCheck() => highestbars(high, hlLengthCheck) == 0 ? 1 : 0
+lowestBarCheck()  => lowestbars(low, hlLengthCheck) == 0 ? 1 : 0
+
 bigBodyBar     = spread > range*0.7
 averageBodyBar = spread > range*0.5
 smallBodyBar   = spread > range*0.3
@@ -109,8 +112,8 @@ factor = 2.0 // shows the number of times the shadow dominates the candlestick b
 shadowPercent = 5.0 // size of shadows
 hasUpShadow = upShadow > shadowPercent / 100 * range
 hasDnShadow = dnShadow > shadowPercent / 100 * range
-shootingStar = smallBodyBar and range > 0 and bodyHigh < hl2 and upShadow >= factor * range and not hasDnShadow
-hammer       = smallBodyBar and range > 0 and bodyLow > hl2 and dnShadow >= factor * range and not hasUpShadow
+shootingStar = spread < spreadAvg and spread > 0 and bodyHigh < hl2 and upShadow >= factor * spread and not hasDnShadow
+hammer       = spread < spreadAvg and spread > 0 and bodyLow > hl2 and dnShadow >= factor * spread and not hasUpShadow
 
 //=========================================================================|
 //               ASCENDING/DECREASING CHANNEL BREAK OUT                    | 
@@ -458,27 +461,27 @@ falseBreakDown3  = stzfb and down_fourthRGRGR() and down_thirdRGRGR() and down_s
 // green - red - shooting star
 fakeyUp1_secondGreenBar()       => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
 fakeyUp1_firstRedBar()          => close[1] <= open[1] ? 1 : 0 
-fakeyUp1_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() ? 1 : 0
+fakeyUp1_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
 // and close <= open[1] and close >= close[1]
 fakey_up1 = sfk and fakeyUp1_secondGreenBar() and fakeyUp1_firstRedBar() and fakeyUp1_shootingStarBar() 
 
 // green - green - shooting star
 fakeyUp2_secondGreenBar()       => close[2] > open[2] and close[1] <= open[2] ? 1 : 0
 fakeyU2_firstGreenBar()         => close[1] >= open[1] and close <= close[2] ? 1 : 0 
-fakeyUp2_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() ? 1 : 0
+fakeyUp2_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
 fakey_up2 = sfk and fakeyUp2_secondGreenBar() and fakeyU2_firstGreenBar() and fakeyUp2_shootingStarBar()
 
 // red - green - shooting star
 fakeyUp3_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
 fakeyUp3_firstGreenBar()   => close[1] >= open[1] and close <= close[1] ? 1 : 0
-fakeyUp3_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() ? 1 : 0
+fakeyUp3_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
 //and close <= close[1] and close >= open[1]
 fakey_up3 = sfk and fakeyUp3_secondRedBar() and fakeyUp3_firstGreenBar() and fakeyUp3_shootingStarBar()
 
 // red - red - shooting star
 fakeyUp4_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
 fakeyUp4_firstRedBar()     => close[1] <= open[1] and close >= open[2] ? 1 : 0
-fakeyUp4_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() ? 1 : 0
+fakeyUp4_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
 //and close <= close[1] and close >= open[1]
 fakey_up4 = sfk and fakeyUp4_secondRedBar() and fakeyUp4_firstRedBar() and fakeyUp4_shootingStarBar()
 
@@ -486,25 +489,25 @@ fakey_up4 = sfk and fakeyUp4_secondRedBar() and fakeyUp4_firstRedBar() and fakey
 // red - green - hammer
 fakeyDown1_secondRedBar()  => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
 fakeyDown1_firstGreenBar() => close[1] >= open[1] and close >= open[1] ? 1 : 0
-fakeyDown1_hammerBar()     => low < low[1] and low < low[2] and bullishPinbar() ? 1 : 0
+fakeyDown1_hammerBar()     => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
 fakey_down1 = sfk and fakeyDown1_secondRedBar() and fakeyDown1_firstGreenBar() and fakeyDown1_hammerBar() 
 
 // green - red - hammer
 fakeyDown2_secondGreenBar()  => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
 fakeyDown2_firstRedBar()     => close[1] <= open[1] and close > close[1] ? 1 : 0
-fakeyDown2_hammerBar()       => low < low[1] and low < low[2] and bullishPinbar() ? 1 : 0
+fakeyDown2_hammerBar()       => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
 fakey_down2 = sfk and fakeyDown2_secondGreenBar() and fakeyDown2_firstRedBar() and fakeyDown2_hammerBar()  
 
 // red - red - hammer
 fakeyDown3_secondRedBar() => close[2] < open[2] and open[1] >= close[2] and close[1] >= close[2] ? 1 : 0
 fakeyDown3_firstRedBar()  => close[1] <= open[1] and close <= open[2] ? 1 : 0
-fakeyDown3_hammerBar()      => low < low[1] and low < low[2] and bullishPinbar() ? 1 : 0
+fakeyDown3_hammerBar()      => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
 fakey_down3 = sfk and fakeyDown3_secondRedBar() and fakeyDown3_firstRedBar() and fakeyDown3_hammerBar()
 
 // green - green - hammer
 fakeyDown4_secondGreenBar()  => close[2] > open[2] and close[1] <= close[2] ? 1 : 0
 fakeyDown4_firstGreenBar()   => close[1] >= open[1] ? 1 : 0
-fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and bullishPinbar() ? 1 : 0
+fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
 fakey_down4 = sfk and fakeyDown4_secondGreenBar() and fakeyDown4_firstGreenBar() and fakeyDown4_hammerBar() 
 
 //=========================================================================|
@@ -609,12 +612,10 @@ bool topKgr_closeNearBottom         = false
 bool topKgr_closeInsidePreviousBar  = false
 bool topKgr_biggerRangePreviousBar  = false
 
-topwick = high - max(close, open)
-
-if abs(range - range[1]) >= 0
+if range - range[1] >= 0
     topKgr_biggerRangePreviousBar := true
 
-if topwick >= spread * 3 
+if upShadow >= spread * 3 
     topKgr_minimumWickLength := true
 
 if close <= low + (high - low)/3 and open <= low + (high - low)/3
@@ -623,12 +624,11 @@ if close <= low + (high - low)/3 and open <= low + (high - low)/3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     topKgr_closeInsidePreviousBar := true
 
-averagetopwicksize = sma(topwick, 50)
-if topwick >= 2 * averagetopwicksize 
+averagetopwicksize = sma(upShadow, 50)
+if upShadow >= 2 * averagetopwicksize 
     topKgr_wickVolatility := true
 
-kangaroo_isHighestHigh = highestbars(high, hlLengthCheck) == 0 ? 1 : 0
-if kangaroo_isHighestHigh
+if highestBarCheck()
     topKgr_noSpaceOnTheLeft := true
 
 topKangaroo() => skgr and topKgr_minimumWickLength and topKgr_closeNearBottom and topKgr_closeInsidePreviousBar and topKgr_biggerRangePreviousBar and topKgr_wickVolatility and topKgr_noSpaceOnTheLeft
@@ -640,13 +640,12 @@ bool bottomKgr_closeNearTop            = false
 bool bottomKgr_closeInsidePreviousBar  = false
 bool bottomKgr_biggerRangePreviousBar  = false
 
-bottomwick = min(close, open) - low
-averagebottomwicksize = sma(bottomwick, 50)
+averagebottomwicksize = sma(dnShadow, 50)
 
-if abs(range - range[1]) >= 0
+if range - range[1] >= 0
     bottomKgr_biggerRangePreviousBar := true
 
-if bottomwick >= spread * 3
+if dnShadow >= spread * 3
     bottomKgr_minimumWickLength := true
 
 if close >= high - (high - low) / 3 and open >= high - (high - low) / 3 
@@ -655,11 +654,10 @@ if close >= high - (high - low) / 3 and open >= high - (high - low) / 3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     bottomKgr_closeInsidePreviousBar := true
 
-if bottomwick >= 2 * averagetopwicksize 
+if dnShadow >= 2 * averagetopwicksize 
     bottomKgr_wickVolatility := true
 
-kangaroo_isLowestLow = lowestbars(low, hlLengthCheck) == 0 ? 1 : 0
-if kangaroo_isLowestLow
+if lowestBarCheck()
     bottomKgr_noSpaceOnTheLeft := true
 
 bottomKangaroo() => skgr and bottomKgr_biggerRangePreviousBar and bottomKgr_minimumWickLength and bottomKgr_closeNearTop and bottomKgr_closeInsidePreviousBar and bottomKgr_wickVolatility and bottomKgr_noSpaceOnTheLeft
@@ -686,7 +684,7 @@ bool blackEngulfing_closeNearLow     = false
 if close > open and close[1] < open[1] and close>=open[1] and open <= close[1]
     whiteEngulfing_isEngulfing := true
 
-if range > spreadAvg and range < spreadAvg*2
+if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
     whiteEngulfing_volatility := true
 
 if spreadTakenByUpShadow()
@@ -700,16 +698,50 @@ whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volat
 if close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
     blackEngulfing_isEngulfing := true
 
-if range > spreadAvg and range < spreadAvg*2
+if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
     blackEngulfing_volatility := true
 
 if spreadTakenByDnShadow()
     blackEngulfing_closeNearLow := true
 
-[engulfing_isHighesthigh]  = f_isHighest(2, hlLengthCheck)
+[engulfing_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
 
-blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and engulfing_isHighesthigh
+blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and engulfing_isHighestHigh
 
+//=========================================================================|
+//                     MORNING/EVENING STAR                                | 
+//=========================================================================|
+bool morning_firstBar               = false
+bool morning_secondBar              = false
+bool morning_thirdBar               = false
+
+if close[2] < open[2] and averageBodyBar[2] and marubozuDnBar[2]
+    morning_firstBar := true
+
+[morning_isLowestLow]  = f_isLowest(2, hlLengthCheck)
+if doji[1] or (hammer[1] and morning_isLowestLow)
+    morning_secondBar := true
+
+if close > open and close > (open[2] + close[2])/2 and close > high[1]
+    morning_thirdBar := true
+
+morningStar() => sms and morning_firstBar and morning_secondBar and morning_thirdBar
+
+bool evening_firstBar               = false
+bool evening_secondBar              = false
+bool evening_thirdBar               = false
+
+if close[2] > open[2] and averageBodyBar[2] and marubozuUpBar[2]
+    evening_firstBar := true
+
+[evening_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
+if doji[1] or (shootingStar[1] and evening_isHighestHigh)
+    evening_secondBar := true
+
+if close < open and close < (open[2] + close[2])/2 and close < low[1]
+    evening_thirdBar := true
+
+eveningStar() => sms and evening_firstBar and evening_secondBar and evening_thirdBar
 //------------------------------------------------------------------------------
 // Tension zone
 barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
@@ -749,7 +781,8 @@ barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
 // Kangaroo
 barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
 
-
+// Morning/Evening Star
+barcolor(morningStar() or eveningStar() ? color.purple : na)
 // x = bar_index
 // y = low
 // txt = tostring(high - low)
