@@ -1,7 +1,7 @@
 //@version=4
 study("Crypto - Price Action Bars", overlay=true)
 
-sob                   = input(true, title="Show Outside bars?")
+// sob                   = input(true, title="Show Outside bars?")
 srft                  = input(true, title="Show Three Rising/Failing Bars?")
 srftfb                = input(true, title="Show Three Rising/Failing Bars False Break?")
 s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
@@ -12,18 +12,14 @@ ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
 scb                   = input(true, title="Show Channel Break Out?")
 snr7                  = input(true, title="Show NR7?")
 snr7f                 = input(true, title="Show NR7 False-break?")
+senf                  = input(true, title="Show Engulfing Bar?")
+skgr                  = input(true, title="Show Kangaroo Tail?")
 pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
 pblb                  = input(2, minval=1, maxval=100, title="Pin Bars Look Back Period To Define The Trend of Highs and Lows")
+eav                   = input(7, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
 insideBarMinSpread    = input(40, minval=1, maxval=99, title="Tension Zone. Percentage Input For First Inside Bar. What % The Wick Of Candle Has To Be Compared To Mother Bar")
-pctMarubozuShadow     = input(50, minval=1, maxval=99, title="Marubozu. Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
-piercingSpread        = input(50, minval=1, maxval=99, title="Piercing. Percentage Input Of Piercing Bars. What % The Body Of Candle Has To Be Compared To First Bar")
-
-//=========================================================================|
-//                     RSI Definitions                                     | 
-//=========================================================================|
-up = rma(max(change(close), 0), 14)
-down = rma(-min(change(close), 0), 14)
-rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+pctShadow             = input(50, minval=1, maxval=99, title="Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
+hlLengthCheck         = input(10, minval=1, maxval=99, title="Highest/Lowest Length Check")
 
 // Inside bar
 minSpreadInsideBar = insideBarMinSpread/100
@@ -33,28 +29,52 @@ pctCp = pctP * .01
 pctCPO = 1 - pctCp
 
 // spread|range
-spread     = close > open ? close - open : open - close
+spread    = abs(close - open)
 bodyHigh  = max(close, open)
 bodyLow   = min(close, open)
 // spread    = bodyHigh - bodyLow
-range     = high-low
-hlRange   = high - low
+range     = high - low
 upShadow  = high - bodyHigh
 dnShadow  = bodyLow - low
 whiteBody = open < close
 blackBody = open > close
 
-// my definition
+// EMA
+spreadAvg = ema(spread, eav)
+rangeAvg  = ema(range, eav)
+// highest check
+f_isLowest(start_index, end_index) =>
+    bool isLowestLow = true
+    for i = start_index to end_index
+        if low[1] > low[i] 
+            isLowestLow := false
+            break
+
+	_isLowestLow = isLowestLow
+    [_isLowestLow]
+
+f_isHighest(start_index, end_index) =>
+    bool isHighestHigh = true
+    for i = start_index to end_index
+        if high[1] < high[i]
+            isHighestHigh := false
+            break
+
+	_isHighestHigh = isHighestHigh
+    [_isHighestHigh]
+
 // doji       = spread < hlRange/4.5
-bigBodyBar     = spread > hlRange*0.7
-averageBodyBar = spread > hlRange*0.5
-smallBodyBar   = spread > hlRange*0.3
+bigBodyBar     = spread > range*0.7
+averageBodyBar = spread > range*0.5
+smallBodyBar   = spread > range*0.3
 
 // Marubozu
 // tong chieu dau rau nen tren va rau nen duoi bang x% cua range nen
 rangeTakenByBothShadows() => (upShadow + dnShadow) <= (high - low)*0.7 ? 1 : 0
-spreadTakenByUpShadow()   => upShadow <= pctMarubozuShadow/100*spread ? 1 : 0
-spreadTakenByDnShadow()   => dnShadow <= pctMarubozuShadow/100*spread ? 1 : 0
+// chieu dai rau nen tren so voi muc cho phep cua rau nen
+spreadTakenByUpShadow()   => upShadow <= pctShadow/100*spread ? 1 : 0
+// chieu dai rau nen duoi so voi muc cho phep cua rau nen
+spreadTakenByDnShadow()   => dnShadow <= pctShadow/100*spread ? 1 : 0
 
 marubozuUpBar = close > open and rangeTakenByBothShadows() and spreadTakenByUpShadow()
 marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnShadow()
@@ -63,14 +83,8 @@ marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnSh
 bullishPinbar() =>  open > high - (range * pctCPO) and close > high - (range * pctCPO) and low <= lowest(pblb) ? 1 : 0
 bearishPinbar() =>  open < high - (range *  pctCp) and close < high - (range * pctCp) and high >= highest(pblb) ? 1 : 0
 
-//outside Bars
-bullishOutsideBar()    => sob and (high > high[1] and low < low[1] and close >= high[1]) ? 1 : 0
-bearishOutsideBar()    => sob and (high > high[1] and low < low[1] and close <= low[1]) ? 1 : 0
-bullishOutsideBars()   => sob and (high > high[1] and low < low[1] and close >= high[1]) and (high > high[2] and close >= high[2]) and averageBodyBar and rsi<65 ? 1 : 0
-bearishOutsideBars()   => sob and (high > high[1] and low < low[1] and close <= low[1]) and (low < low[2] and close <= low[2]) and averageBodyBar and rsi>35 ? 1 : 0
-
 //Piercing bar (>=0.5)
-pctPiercing = piercingSpread/100
+pctPiercing = 50/100
 bearishPiercing()    =>  (open > close[1] or high > high[1]) and ((open - close) >= ((close[1] - open[1])*pctPiercing))
 bullishPiercing()    =>  (open < close[1] or low < low[1])   and (close - open) >= ((open[1] - close[1])*pctPiercing) ? 1 : 0
 
@@ -210,10 +224,10 @@ bool threeSoldiers_thirdBar  = false
 if close[2] > open[2] and marubozuUpBar[2]
     threeSoldiers_firstBar := true
 
-if close[1] > open[1] and open[1] <= close[2] and close[1] > close[2] and marubozuUpBar[1]
+if close[1] > open[1] and open[1] <= close[2] and close[1] >= high[2] and range[1] > spreadAvg and marubozuUpBar[1]
     threeSoldiers_secondBar := true
 
-if close > open and open <= close[1] and close > close[1] and marubozuUpBar
+if close > open and open <= close[1] and close > close[1] and close >= high[1]  and range<spreadAvg*2 and marubozuUpBar
     threeSoldiers_thirdBar := true
 
 threeWhiterSoldier() => s3ws and threeSoldiers_firstBar and threeSoldiers_secondBar and threeSoldiers_thirdBar
@@ -227,10 +241,10 @@ bool threeCrows_thirdBar   = false
 if close[2] < open[2] and marubozuDnBar[2]
     threeCrows_firstBar := true
 
-if close[1] < open[1] and open[1] >= close[2] and close[1] < close[2] and marubozuDnBar[1]
+if close[1] < open[1] and open[1] >= close[2] and close[1] <= low[2] and range[1] > spreadAvg and marubozuDnBar[1]
     threeCrows_secondBar := true
 
-if close < open and open >= close[1] and close < close[1] and marubozuDnBar
+if close < open and open >= close[1] and close < close[1] and close <= low[1] and range<spreadAvg*2 and marubozuDnBar
     threeCrows_thirdBar := true
 
 threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and threeCrows_thirdBar
@@ -571,16 +585,130 @@ if nr7f_thirdInsideBar
 if nr7f_secondInsideBar
     nr7f_secondBar := true
 
-// if ??
-//     nr7f_firstBar := true
-
-if close[1] > open[1] and (bearishPiercing() or bearishEngulfing() or bearishOutsideBar())
+if close[1] > open[1] and (bearishPiercing() or bearishEngulfing())
     nr7f_reverseBar := true
 
-if close[1] < open[1] and (bullishPiercing() or bullishEngulfing() or bullishOutsideBar())
+if close[1] < open[1] and (bullishPiercing() or bullishEngulfing())
     nr7f_reverseBar := true
 
 nr7f() => snr7 and nr7f_seventhBar and nr7f_sixthBar and nr7f_fifthBar and nr7f_fourthBar and nr7f_thirdBar and nr7f_secondBar and nr7f_reverseBar
+
+//=========================================================================|
+//                     KANGAROO TAIL                                       | 
+//=========================================================================|
+// range > average range
+// no space on the left
+// not place right after marubozu bar
+// close inside the range of previous bar
+// shadow >= body*3
+// close at 1/3 of the top or bottom
+bool topKgr_wickVolatility          = false
+bool topKgr_minimumWickLength       = false
+bool topKgr_noSpaceOnTheLeft        = false
+bool topKgr_closeNearBottom         = false
+bool topKgr_closeInsidePreviousBar  = false
+bool topKgr_biggerRangePreviousBar  = false
+
+topwick = high - max(close, open)
+
+if abs(range - range[1]) >= 0
+    topKgr_biggerRangePreviousBar := true
+
+if topwick >= spread * 3 
+    topKgr_minimumWickLength := true
+
+if close <= low + (high - low)/3 and open <= low + (high - low)/3
+    topKgr_closeNearBottom := true
+
+if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
+    topKgr_closeInsidePreviousBar := true
+
+averagetopwicksize = sma(topwick, 50)
+if topwick >= 2 * averagetopwicksize 
+    topKgr_wickVolatility := true
+
+kangaroo_isHighestHigh = highestbars(high, hlLengthCheck) == 0 ? 1 : 0
+if kangaroo_isHighestHigh
+    topKgr_noSpaceOnTheLeft := true
+
+topKangaroo() => skgr and topKgr_minimumWickLength and topKgr_closeNearBottom and topKgr_closeInsidePreviousBar and topKgr_biggerRangePreviousBar and topKgr_wickVolatility and topKgr_noSpaceOnTheLeft
+
+bool bottomKgr_wickVolatility          = false
+bool bottomKgr_minimumWickLength       = false
+bool bottomKgr_noSpaceOnTheLeft        = false
+bool bottomKgr_closeNearTop            = false
+bool bottomKgr_closeInsidePreviousBar  = false
+bool bottomKgr_biggerRangePreviousBar  = false
+
+bottomwick = min(close, open) - low
+averagebottomwicksize = sma(bottomwick, 50)
+
+if abs(range - range[1]) >= 0
+    bottomKgr_biggerRangePreviousBar := true
+
+if bottomwick >= spread * 3
+    bottomKgr_minimumWickLength := true
+
+if close >= high - (high - low) / 3 and open >= high - (high - low) / 3 
+    bottomKgr_closeNearTop := true
+
+if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
+    bottomKgr_closeInsidePreviousBar := true
+
+if bottomwick >= 2 * averagetopwicksize 
+    bottomKgr_wickVolatility := true
+
+kangaroo_isLowestLow = lowestbars(low, hlLengthCheck) == 0 ? 1 : 0
+if kangaroo_isLowestLow
+    bottomKgr_noSpaceOnTheLeft := true
+
+bottomKangaroo() => skgr and bottomKgr_biggerRangePreviousBar and bottomKgr_minimumWickLength and bottomKgr_closeNearTop and bottomKgr_closeInsidePreviousBar and bottomKgr_wickVolatility and bottomKgr_noSpaceOnTheLeft
+//=========================================================================|
+//                     ENGULFING                                           | 
+//=========================================================================|
+// spread has more volatility than last 10 bars and not x2 average volatility
+// close near the high/close
+// engulfing bar has higher high and higher low compared to previous bar
+// space on the left(7 bars)
+
+bool whiteEngulfing_volatility       = false
+bool whiteEngulfing_isEngulfing      = false
+bool whiteEngulfing_spaceOnTheLeft   = false
+bool whiteEngulfing_closeNearHigh    = false
+
+bool blackEngulfing_volatility       = false
+bool blackEngulfing_isEngulfing      = false
+bool blackEngulfing_spaceOnTheLeft   = false
+bool blackEngulfing_closeNearLow     = false
+
+       
+// white
+if close > open and close[1] < open[1] and close>=open[1] and open <= close[1]
+    whiteEngulfing_isEngulfing := true
+
+if range > spreadAvg and range < spreadAvg*2
+    whiteEngulfing_volatility := true
+
+if spreadTakenByUpShadow()
+    whiteEngulfing_closeNearHigh := true
+
+[engulfing_isLowestLow]  = f_isLowest(2, hlLengthCheck)
+
+whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and engulfing_isLowestLow
+
+// black
+if close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+    blackEngulfing_isEngulfing := true
+
+if range > spreadAvg and range < spreadAvg*2
+    blackEngulfing_volatility := true
+
+if spreadTakenByDnShadow()
+    blackEngulfing_closeNearLow := true
+
+[engulfing_isHighesthigh]  = f_isHighest(2, hlLengthCheck)
+
+blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and engulfing_isHighesthigh
 
 //------------------------------------------------------------------------------
 // Tension zone
@@ -589,10 +717,6 @@ barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
 // Tension zone false break
 barcolor(falseBreakUp1 or falseBreakUp2 or falseBreakUp3 ? color.orange : na)
 barcolor(falseBreakDown1 or falseBreakDown2 or falseBreakDown3? color.orange : na)
-
-// outside bar
-barcolor(bullishOutsideBars() ? color.purple : na)
-barcolor(bearishOutsideBars() ? color.purple : na)
 
 //fakey
 barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4 ? color.silver : na)
@@ -603,8 +727,6 @@ barcolor(risingThree() or faillingThree() ? color.yellow : na)
 
 // rising/failling three false break
 barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : na)
-
-// coiling inside bar
 
 //Stalled pattern 
 barcolor(bullishStalled() or bearishStalled() ? color.yellow : na)
@@ -620,3 +742,20 @@ barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yello
 // NR7
 barcolor(nr7() ? color.yellow : na)
 barcolor(nr7f() ? color.orange : na)
+
+// Engulfing
+barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
+
+// Kangaroo
+barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
+
+
+// x = bar_index
+// y = low
+// txt = tostring(high - low)
+// label.new(x, y, txt, color=color.red)
+
+// a = bar_index
+// b = high
+// text = tostring(high[1] - low[1])
+// label.new(a, b, text, color=color.green)
