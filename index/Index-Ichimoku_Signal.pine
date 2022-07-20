@@ -29,7 +29,7 @@ outsideBarDown = (high>high[1] and low<low[1] and close<previousLow)
 //=========================================================================|
 //                    Basic VSA Definitions                                | 
 //=========================================================================|
-volAvg = sma(volume,40)
+volAvg = sma(volume,42)
 volMean = stdev(volAvg,30)
 volUpBand3 = volAvg + (3*volMean)
 volUpBand2 = volAvg + (2*volMean)
@@ -43,7 +43,7 @@ C = close
 O = open
 midprice        = (H+L)/2
 spread          = (H-L)
-avgSpread       = sma(spread,40)
+avgSpread       = sma(spread,27)
 avgSpreadBar    = spread > avgSpread// to be checked
 wideRangeBar    = spread>(1.5*avgSpread)
 narrowRangeBar  = spread<(0.7*avgSpread)
@@ -143,10 +143,10 @@ if red_candle
 
 bool buyKumo = na
 if breakup and close>high[1]
-    buyKumo := (avgSpreadBar or upClose) and firstTenkan>minPresentSS
+    buyKumo := (avgSpreadBar or upClose)
 bool sellKumo = na
 if breakdown and close<low[1]
-    sellKumo := (avgSpreadBar or downClose) and firstTenkan<maxPresentSS
+    sellKumo := (avgSpreadBar or downClose)
 
 // -----------------Chikou-----------------------
 maxSS     = max(leadSSA[25],leadSSB[25])
@@ -170,38 +170,64 @@ tkCrossUnderkj = crossunder(firstTenkan,firstKijun) and red_candle and (avgSprea
 //                 ICHIMOKU SIGNAL                                         |
 //=========================================================================|
 // Aosen
-plotshape(showaosenbreak ? aosenUp and not buyKumo and not chikouOpenUp: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="AU", title="Aosen Breakout Upward", show_last=showLast)
-plotshape(showaosenbreak ? aosenDown and not sellKumo and not chikouOpenDown: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="AD", title="Aosen Breakout Downward", show_last=showLast)
+plotshape(showaosenbreak ? aosenUp and not buyKumo and not chikouOpenUp and not tkCrossOverkj : na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="AU", title="Aosen Breakout Upward", show_last=showLast)
+plotshape(showaosenbreak ? aosenDown and not sellKumo and not chikouOpenDown and not tkCrossUnderkj : na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="AD", title="Aosen Breakout Downward", show_last=showLast)
+alertcondition(aosenUp and not buyKumo and not chikouOpenUp and not tkCrossOverkj, title="Aosen Breakout Upward")
+alertcondition(aosenDown and not sellKumo and not chikouOpenDown and not tkCrossUnderkj, title="Aosen Breakout Downward")
 
 //Kumo breakout
-plotshape(showkumobreak ? buyKumo and not aosenUp and not tkCrossOverkj and not chikouOpenUp: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="BU", title="Kumo Breakout Upward", show_last=showLast)
-plotshape(showkumobreak ? sellKumo and not aosenDown and not tkCrossUnderkj and not chikouOpenDown: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="BD", title="Kumo Breakout Downward", show_last=showLast)
+plotshape(showkumobreak ? buyKumo and not aosenUp and not tkCrossOverkj and not chikouOpenUp : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="BU", title="Kumo Breakout Upward", show_last=showLast)
+plotshape(showkumobreak ? sellKumo and not aosenDown and not tkCrossUnderkj and not chikouOpenDown : na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="BD", title="Kumo Breakout Downward", show_last=showLast)
+alertcondition(buyKumo and not aosenUp and not tkCrossOverkj and not chikouOpenUp, title="Kumo Breakout Upward")
+alertcondition(sellKumo and not aosenDown and not tkCrossUnderkj and not chikouOpenDown, title="Kumo Breakout Downward")
 
 // Combine kumo + aosen breakout
 plotshape(showaosenbreak and showkumobreak? aosenUp and buyKumo : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="AKBU", title="Aosen Kumo Breakout Upward", show_last=showLast)
 plotshape(showaosenbreak and showkumobreak ? aosenDown and sellKumo: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="AKBD", title="Aosen Kumo Breakout Downward", show_last=showLast)
+alertcondition(aosenUp and buyKumo, title="Aosen Kumo Breakout Upward")
+alertcondition(aosenDown and sellKumo, title="Aosen Kumo Breakout Downward")
 
 // Tenkan Kijun
-plotshape(showtkkj ? tkCrossOverkj and not buyKumo: na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="TK", title="Tenkan cross over Kijun", show_last=showLast)
-plotshape(showtkkj ? tkCrossUnderkj and not sellKumo: na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="KT", title="Tenkan cross under Kijun", show_last=showLast)
+plotshape(showtkkj ? tkCrossOverkj and not buyKumo and not aosenUp and not chikouOpenUp : na, color=color.navy, style=shape.cross, location=location.belowbar, size=size.tiny, text="TK", title="Tenkan cross over Kijun", show_last=showLast)
+plotshape(showtkkj ? tkCrossUnderkj and not sellKumo and not aosenDown and not chikouOpenDown : na, color=color.maroon, style=shape.cross, location=location.abovebar, size=size.tiny, text="KT", title="Tenkan cross under Kijun", show_last=showLast)
+alertcondition(tkCrossOverkj and not buyKumo and not aosenUp and not chikouOpenUp, title="Tenkan cross over Kijun")
+alertcondition(tkCrossUnderkj and not sellKumo and not aosenDown and not chikouOpenDown, title="Tenkan cross under Kijun")
 
 // Combine kumo breakout + tenkan kijun
 plotshape(showtkkj and showkumobreak? tkCrossOverkj and buyKumo : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="TKKU", title="Tenkan Cross Kijun Kumo Breakout Upward", show_last=showLast)
-plotshape(showtkkj and showkumobreak ? tkCrossUnderkj and sellKumo: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="TKKD", title="Kijun Cross Tenkan Kumo Breakout Downward", show_last=showLast)
+plotshape(showtkkj and showkumobreak ? tkCrossUnderkj and sellKumo : na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="TKKD", title="Kijun Cross Tenkan Kumo Breakout Downward", show_last=showLast)
+alertcondition(tkCrossOverkj and buyKumo, title="Tenkan Cross Kijun Kumo Breakout Upward")
+alertcondition(tkCrossUnderkj and sellKumo, title="Kijun Cross Tenkan Kumo Breakout Downward")
 
 //Chikou open space 
-plotshape(showchikouopen ? chikouOpenUp and not aosenUp and not buyKumo and upClose: na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="OU", title="Chikou Open Space", show_last=showLast)
-plotshape(showchikouopen ? chikouOpenDown and not aosenDown and not sellKumo and downClose: na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="OD", title="Chikou Open Space", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenUp and not aosenUp and not buyKumo and not tkCrossOverkj and upClose : na, color=color.navy, style=shape.triangleup, location=location.belowbar, size=size.tiny, text="OU", title="Chikou Open Up", show_last=showLast)
+plotshape(showchikouopen ? chikouOpenDown and not aosenDown and not sellKumo and not tkCrossUnderkj and downClose : na, color=color.maroon, style=shape.triangledown, location=location.abovebar, size=size.tiny, text="OD", title="Chikou Open Down", show_last=showLast)
+alertcondition(chikouOpenUp and not aosenUp and not buyKumo and not tkCrossOverkj and upClose, title="Chikou Open Up")
+alertcondition(chikouOpenDown and not aosenDown and not sellKumo and not tkCrossUnderkj and downClose, title="Chikou Open Down")
 
 // Combine aosen breakout + Chikou free
 plotshape(showaosenbreak and showchikouopen? aosenUp and chikouOpenUp : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="ACBU", title="Aosen Chikou Breakout Upward", show_last=showLast)
 plotshape(showaosenbreak and showchikouopen ? aosenDown and chikouOpenDown: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="ACBD", title="Aosen Chikou Breakout Downward", show_last=showLast)
+alertcondition(aosenUp and chikouOpenUp, title="Aosen Chikou Breakout Upward")
+alertcondition(aosenDown and chikouOpenDown, title="Aosen Chikou Breakout Downward")
 
 // Combine chikou open space + kumo breakout
 plotshape(showchikouopen and showkumobreak ? buyKumo and chikouOpenUp :na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="KCBU", title="Ichi 1stKumo/Chikou Breakout Upward", show_last=showLast)
 plotshape(showchikouopen and showkumobreak ? sellKumo and chikouOpenDown :na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KCBD", title="Ichi 1stKumo/Chikou Breakout Downward", show_last=showLast)
 alertcondition(buyKumo and chikouOpenUp, title="Kumo Breakout and Chikou Open Up")
 alertcondition(sellKumo and chikouOpenDown, title="Kumo Breakout and Chikou Open Down")
+
+// Combine aosen breakout + tenkan kijun crossed
+plotshape(showtkkj and showaosenbreak? aosenUp and tkCrossOverkj : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="TKAU", title="Aosen Tenkan Crossover Kijun", show_last=showLast)
+plotshape(showtkkj and showaosenbreak ? aosenDown and tkCrossUnderkj: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KTAD", title="Aosen Tenkan Crossunder Kijun", show_last=showLast)
+alertcondition(aosenUp and tkCrossOverkj, title="Aosen Tenkan Crossover Kijun")
+alertcondition(aosenDown and tkCrossUnderkj, title="Aosen Tenkan Crossunder Kijun")
+
+// Combine chikou open + tenkan kijun crossed
+plotshape(showtkkj and showchikouopen? chikouOpenUp and tkCrossOverkj : na, color=color.navy, style=shape.arrowup, location=location.belowbar, size=size.tiny, text="TKOU", title="Chikou Tenkan Crossover Kijun", show_last=showLast)
+plotshape(showtkkj and showchikouopen ? chikouOpenDown and tkCrossUnderkj: na, color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, text="KTOD", title="Chikou Tenkan Crossunder Kijun", show_last=showLast)
+alertcondition(chikouOpenUp and tkCrossOverkj, title="Chikou Tenkan Crossover Kijun")
+alertcondition(chikouOpenDown and tkCrossUnderkj, title="Chikou Tenkan Crossunder Kijun")
 
 // Exception need more restrict
 // when EOU/EOD OU/OD appear, price must above kumo cloud or at least inside  hbc

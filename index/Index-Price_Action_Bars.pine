@@ -1,10 +1,9 @@
 //@version=4
-study("Crypto - Price Action Bars", overlay=true)
+study("Index - Price Action Bars", overlay=true)
 
 // sob                   = input(true, title="Show Outside bars?")
 srft                  = input(true, title="Show Three Rising/Failing Bars?")
 srftfb                = input(true, title="Show Three Rising/Failing Bars False Break?")
-s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
 stz                   = input(true, title="Show Tension zone?")
 stzfb                 = input(true, title="Show Tension zone false break?")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
@@ -46,7 +45,7 @@ rangeAvg             = ema(range, eav)
 averagTopWickSize    = sma(upShadow, 50)
 averagBottomWickSize = sma(dnShadow, 50)
 
-// highest check
+// lowest check
 f_isLowest(start_index, end_index) =>
     bool isLowestLow = true
     for i = start_index to end_index
@@ -56,7 +55,7 @@ f_isLowest(start_index, end_index) =>
 
 	_isLowestLow = isLowestLow
     [_isLowestLow]
-
+// highest check
 f_isHighest(start_index, end_index) =>
     bool isHighestHigh = true
     for i = start_index to end_index
@@ -214,46 +213,6 @@ if  close > open[1] and close >= (close[2] + open[2])/2
     bearishStalled_reverserBar := true
 
 bearishStalled() => ssp and bearishStalled_thirdBar and bearishStalled_secondBar and bearishStalled_firstBar and bearishStalled_reverserBar
-
-//=========================================================================|
-//                     THREE WHITE SOLDIERS                                | 
-//=========================================================================|
-// There must be three long and bullish (i.e., white or green) candlesticks in a row.
-// Each of those candles must open above the previous day’s open. Ideally, it will open in the middle price range of the previous day.
-// Each candle must open progressively upward, establishing a new short-term high.
-// The candles should have very small (or nonexistent) upper shadows/wicks.
-// One of the key things to watch is the volume supporting the formation of three white soldiers. Any pattern on low volume is suspect because it is the market action of the few rather than the many.
-bool threeSoldiers_firstBar   = false
-bool threeSoldiers_secondBar  = false
-bool threeSoldiers_thirdBar  = false
-
-if close[2] > open[2] and marubozuUpBar[2]
-    threeSoldiers_firstBar := true
-
-if close[1] > open[1] and open[1] <= close[2] and close[1] >= high[2] and spread[1] > spreadAvg and marubozuUpBar[1]
-    threeSoldiers_secondBar := true
-
-if close > open and open <= close[1] and close > close[1] and close >= high[1]  and spread<spreadAvg*2 and marubozuUpBar
-    threeSoldiers_thirdBar := true
-
-threeWhiterSoldier() => s3ws and threeSoldiers_firstBar and threeSoldiers_secondBar and threeSoldiers_thirdBar
-//=========================================================================|
-//                     THREE WHITE CROWS                                   | 
-//=========================================================================|
-bool threeCrows_firstBar   = false
-bool threeCrows_secondBar  = false
-bool threeCrows_thirdBar   = false
-
-if close[2] < open[2] and marubozuDnBar[2]
-    threeCrows_firstBar := true
-
-if close[1] < open[1] and open[1] >= close[2] and close[1] <= low[2] and spread[1] > spreadAvg and marubozuDnBar[1]
-    threeCrows_secondBar := true
-
-if close < open and open >= close[1] and close < close[1] and close <= low[1] and spread<spreadAvg*2 and marubozuDnBar
-    threeCrows_thirdBar := true
-
-threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and threeCrows_thirdBar
 
 //=========================================================================|
 //                     RASING/FAILLING THREE                               | 
@@ -719,10 +678,10 @@ if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and spread 
     morning_firstBar := true
 
 [morning_isLowestLow]  = f_isLowest(2, hlLengthCheck)
-if doji[1] or (hammer[1] and morning_isLowestLow) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and upShadow[1] < averagTopWickSize)
+if doji[1] or (hammer[1] and morning_isLowestLow) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and morning_isLowestLow)
     morning_secondBar := true
 
-if close > open and close > (open[2] + close[2])/2 and close > high[1]
+if close > open and close > (open[2] + close[2])/2 and close > high[1] 
     morning_thirdBar := true
 
 morningStar() => sms and morning_firstBar and morning_secondBar and morning_thirdBar
@@ -735,7 +694,7 @@ if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and spread 
     evening_firstBar := true
 
 [evening_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
-if doji[1] or (shootingStar[1] and evening_isHighestHigh) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and dnShadow[1] < averagBottomWickSize)
+if doji[1] or (shootingStar[1] and evening_isHighestHigh) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and evening_isHighestHigh)
     evening_secondBar := true
 
 if close < open and close < (open[2] + close[2])/2 and close < low[1]
@@ -762,11 +721,6 @@ barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : n
 
 //Stalled pattern 
 barcolor(bullishStalled() or bearishStalled() ? color.yellow : na)
-
-//Tower top/bottom pattern 
-
-// three white soldiers / three black crows
-barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
 
 // Channel break
 barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yellow : na)
