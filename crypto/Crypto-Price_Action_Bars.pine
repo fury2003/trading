@@ -1,10 +1,13 @@
 //@version=4
 study("Crypto - Price Action Bars", overlay=true)
 
-// sob                   = input(true, title="Show Outside bars?")
+sob                   = input(true, title="Show Outside bars?")
 srft                  = input(true, title="Show Three Rising/Failing Bars?")
 srftfb                = input(true, title="Show Three Rising/Failing Bars False Break?")
 s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
+satr                  = input(true, title="Show Ascending Triangle?")
+sdtr                  = input(true, title="Show Descending Triangle?")
+sstr                  = input(true, title="Show Symmetrical Triangle?")
 stz                   = input(true, title="Show Tension zone?")
 stzfb                 = input(true, title="Show Tension zone false break?")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
@@ -47,20 +50,20 @@ averagTopWickSize    = sma(upShadow, 50)
 averagBottomWickSize = sma(dnShadow, 50)
 
 // highest check
-f_isLowest(start_index, end_index) =>
+f_isLowest(lowest_index, start_index, end_index) =>
     bool isLowestLow = true
     for i = start_index to end_index
-        if low[1] > low[i] 
+        if low[lowest_index] > low[i] 
             isLowestLow := false
             break
 
 	_isLowestLow = isLowestLow
     [_isLowestLow]
 
-f_isHighest(start_index, end_index) =>
+f_isHighest(highest_index, start_index, end_index) =>
     bool isHighestHigh = true
     for i = start_index to end_index
-        if high[1] < high[i]
+        if high[highest_index] < high[i]
             isHighestHigh := false
             break
 
@@ -69,6 +72,8 @@ f_isHighest(start_index, end_index) =>
 
 highestBarCheck() => highestbars(high, hlLengthCheck) == 0 ? 1 : 0
 lowestBarCheck()  => lowestbars(low, hlLengthCheck) == 0 ? 1 : 0
+highestBarCheckWithParam(length) => highestbars(high, length) == 0 ? 1 : 0
+lowestBarCheckWithParam(length)  => lowestbars(low, length) == 0 ? 1 : 0
 
 bigSpreadTaken     = spread > range*0.7
 averageSpreadTaken = spread > range*0.5
@@ -104,6 +109,8 @@ shadowEqualsPercent = 100.0
 shadowEquals = upShadow == dnShadow or (abs(upShadow - dnShadow) / dnShadow * 100) < shadowEqualsPercent and (abs(dnShadow - upShadow) / upShadow * 100) < shadowEqualsPercent
 isDojiBody = range > 0 and spread <= range * dojiBodyPercent / 100
 doji = isDojiBody and shadowEquals
+dragonflyDoji = isDojiBody and upShadow <= spread
+gravestoneDoji = isDojiBody and dnShadow <= spread
 
 // Spinning Top 
 spinningTopPercent = 34.0
@@ -254,6 +261,106 @@ if close < open and open >= close[1] and close < close[1] and close <= low[1] an
     threeCrows_thirdBar := true
 
 threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and threeCrows_thirdBar
+
+//=========================================================================|
+//                     ASCENDING TRIANGLE                                  | 
+//=========================================================================|
+bool ascTriangle_firstBar       = false
+bool ascTriangle_secondBar      = false
+bool ascTriangle_thirdBar       = false
+bool ascTriangle_fourthBar      = false
+
+if close[4] < open[4] and averageSpreadTaken[4]
+    ascTriangle_firstBar := true
+
+if low[3] < low[4] and open[3] >= close[4] and close[3] <= open[4] and close[3] >= close[4]
+    ascTriangle_secondBar := true
+
+if high[2] > high[3] and low[2] > low[3] 
+    ascTriangle_thirdBar := true
+
+if high[1] > high[2] and low[1] > low[2] and close[1] <= open[4]
+    ascTriangle_fourthBar := true
+
+ascendingTriangle() => satr and ascTriangle_firstBar and ascTriangle_secondBar and ascTriangle_thirdBar and ascTriangle_fourthBar
+
+//=========================================================================|
+//                     DESCENDING TRIANGLE                                 | 
+//=========================================================================|
+bool descTriangle_firstBar       = false
+bool descTriangle_secondBar      = false
+bool descTriangle_thirdBar       = false
+bool descTriangle_fourthBar      = false
+
+if close[4] > open[4] and averageSpreadTaken[4]
+    descTriangle_firstBar := true
+
+if low[3] > low[4] and high[3] < high[4] and open[3] <= close[4] and close[3] >= open[4] and close[3] <= close[4]
+    descTriangle_secondBar := true
+
+if high[2] < high[3] and low[2] < low[3]
+    descTriangle_thirdBar := true
+
+if high[1] < high[2] and low[1] < low[2] and close[1] >= open[4]
+    descTriangle_fourthBar := true
+
+descendingTriangle() => sdtr and descTriangle_firstBar and descTriangle_secondBar and descTriangle_thirdBar and descTriangle_fourthBar
+
+
+//=========================================================================|
+//                     SYMMETRICAL TRIANGLE                                | 
+//=========================================================================|
+bool symTriangle_firstBar       = false
+bool symTriangle_secondBar      = false
+bool symTriangle_thirdBar       = false
+bool symTriangle_fourthBar      = false
+
+if range[4] > rangeAvg
+    symTriangle_firstBar := true
+
+if high[3] < high[4] and low[3] > low[4]
+    symTriangle_secondBar := true
+
+if high[2] < high[3] and low[2] > low[3]
+    symTriangle_thirdBar := true
+
+if (high[1] < high[2] and low[1] > low[2]) or ((high[1] < high[2] or low[1] > low[2]) and smallSpreadTaken[1])
+    symTriangle_fourthBar := true
+
+symmetricalTriangle() => sstr and symTriangle_firstBar and symTriangle_secondBar and symTriangle_thirdBar and symTriangle_fourthBar
+
+//=========================================================================|
+//                     SYMMETRICAL TRIANGLE BREAKOUT                       | 
+//=========================================================================|
+bool symBreakout_firstBar      = false
+bool symBreakout_secondBar     = false
+bool symBreakout_thirdBar      = false
+bool symBreakout_fourthBar     = false
+bool symBreakout_breakoutBar   = false
+
+if spread[4] > spreadAvg and range[4] > rangeAvg
+    symBreakout_firstBar := true
+
+if high[3] < high[4] and low[3] > low[4] and spread[3] < spreadAvg
+    symBreakout_secondBar := true
+
+if high[2] < high[4] and low[2] > low[4] and spread[2] < spreadAvg
+    symBreakout_thirdBar := true
+
+if high[1] < high[2] and low[1] > low[2] and spread[1] < spreadAvg
+    symBreakout_fourthBar := true
+
+f_triangleBreakout() =>
+	_isUp               = close > open 
+	_breakDirection     = _isUp ? close > close[4] and close > open[4] : close < close[4] and close < open[4]
+    [_breakDirection]
+
+[breakDirection]  = f_triangleBreakout()
+
+if averageSpreadTaken and breakDirection
+    symBreakout_breakoutBar := true 
+
+symmetricalTriangleBreakout() => sstr and symBreakout_firstBar and symBreakout_secondBar and symBreakout_thirdBar and symBreakout_fourthBar and symBreakout_breakoutBar
 
 //=========================================================================|
 //                     RASING/FAILLING THREE                               | 
@@ -663,6 +770,39 @@ if lowestBarCheck()
     bottomKgr_noSpaceOnTheLeft := true
 
 bottomKangaroo() => skgr and bottomKgr_biggerRangePreviousBar and bottomKgr_minimumWickLength and bottomKgr_closeNearTop and bottomKgr_closeInsidePreviousBar and bottomKgr_wickVolatility and bottomKgr_noSpaceOnTheLeft
+
+//=========================================================================|
+//                     OUTSIDE BAR                                         | 
+//=========================================================================|
+bool whiteOutside_volatility       = false
+bool whiteOutside_isOutside        = false
+bool whiteOutside_spaceOnTheLeft   = false
+
+bool blackOutside_volatility       = false
+bool blackOutside_isOutside        = false
+bool blackOutside_spaceOnTheLeft   = false
+
+if close > open and close[1] < open[1] and close >= open[1] and open <= close[1] and high > high[1] and low < low[1]
+    whiteOutside_isOutside := true
+
+if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+    whiteOutside_volatility := true
+
+if lowestBarCheckWithParam(2)
+    whiteOutside_spaceOnTheLeft := true
+
+whiteOutsideBar() => sob and whiteOutside_isOutside and whiteOutside_volatility and whiteOutside_spaceOnTheLeft
+
+if close < open and close[1] > open[1] and close <= open[1] and open >= close[1] and high > high[1] and low < low[1]
+    blackOutside_isOutside := true
+
+if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+    blackOutside_volatility := true
+
+if highestBarCheckWithParam(2)
+    blackOutside_spaceOnTheLeft := true
+
+blackOutsideBar() => sob and blackOutside_isOutside and blackOutside_volatility and blackOutside_spaceOnTheLeft
 //=========================================================================|
 //                     ENGULFING                                           | 
 //=========================================================================|
@@ -679,9 +819,9 @@ bool blackEngulfing_volatility       = false
 bool blackEngulfing_isEngulfing      = false
 bool blackEngulfing_spaceOnTheLeft   = false
 bool blackEngulfing_closeNearLow     = false
-       
+
 // white
-if close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+if close > open and close[1] < open[1] and close >= open[1] and open <= close[1] and averageSpreadTaken[1]
     whiteEngulfing_isEngulfing := true
 
 if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
@@ -690,12 +830,14 @@ if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
 if spreadTakenByUpShadow()
     whiteEngulfing_closeNearHigh := true
 
-[engulfing_isLowestLow]  = f_isLowest(2, hlLengthCheck)
+[engulfing_isLowestLow]  = f_isLowest(1, 2, hlLengthCheck)
+if engulfing_isLowestLow or lowestBarCheck()
+    whiteEngulfing_spaceOnTheLeft := true
 
-whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and engulfing_isLowestLow
+whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and whiteEngulfing_spaceOnTheLeft
 
 // black
-if close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+if close < open and close[1] > open[1] and close <= open[1] and open >= close[1] and averageSpreadTaken[1]
     blackEngulfing_isEngulfing := true
 
 if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
@@ -704,29 +846,49 @@ if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
 if spreadTakenByDnShadow()
     blackEngulfing_closeNearLow := true
 
-[engulfing_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
+[engulfing_isHighestHigh]  = f_isHighest(1, 2, hlLengthCheck)
+if engulfing_isHighestHigh or highestBarCheck()
+    blackEngulfing_spaceOnTheLeft := true
 
-blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and engulfing_isHighestHigh
+blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and blackEngulfing_spaceOnTheLeft
 
 //=========================================================================|
 //                     MORNING/EVENING STAR                                | 
 //=========================================================================|
-bool morning_firstBar               = false
-bool morning_secondBar              = false
-bool morning_thirdBar               = false
+//morning
+bool morning_firstBar                = false
+bool morning_secondBar               = false
+bool morning_thirdBar                = false
 
 if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and spread > spreadAvg
     morning_firstBar := true
 
-[morning_isLowestLow]  = f_isLowest(2, hlLengthCheck)
+[morning_isLowestLow]  = f_isLowest(1, 2, hlLengthCheck)
 if doji[1] or (hammer[1] and morning_isLowestLow) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and upShadow[1] < averagTopWickSize)
     morning_secondBar := true
 
-if close > open and close > (open[2] + close[2])/2 and close > high[1]
+if close > open and close > (open[2] + close[2])/2 and close > high[1] and marubozuUpBar
     morning_thirdBar := true
 
 morningStar() => sms and morning_firstBar and morning_secondBar and morning_thirdBar
 
+bool morning2_firstBar               = false
+bool morning2_secondBar              = false
+bool morning2_thirdBar               = false
+
+[morning2_isLowestLow]  = f_isLowest(2, 3, hlLengthCheck)
+if close[2] < open[2] and averageSpreadTaken[2] and spread[2] > spreadAvg and morning2_isLowestLow
+    morning2_firstBar := true
+
+if doji[1] or hammer[1] or spinningTopWhite[1] or spinningTopBlack[1] or dragonflyDoji[1]
+    morning2_secondBar := true
+
+if close > open and close > open[2] and marubozuUpBar
+    morning2_thirdBar := true
+
+morningStar2() => sms and morning2_firstBar and morning2_secondBar and morning2_thirdBar
+
+// evening
 bool evening_firstBar               = false
 bool evening_secondBar              = false
 bool evening_thirdBar               = false
@@ -734,14 +896,31 @@ bool evening_thirdBar               = false
 if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and spread > spreadAvg
     evening_firstBar := true
 
-[evening_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
+[evening_isHighestHigh]  = f_isHighest(1, 2, hlLengthCheck)
 if doji[1] or (shootingStar[1] and evening_isHighestHigh) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and dnShadow[1] < averagBottomWickSize)
     evening_secondBar := true
 
-if close < open and close < (open[2] + close[2])/2 and close < low[1]
+if close < open and close < (open[2] + close[2])/2 and close < low[1] and marubozuDnBar
     evening_thirdBar := true
 
 eveningStar() => sms and evening_firstBar and evening_secondBar and evening_thirdBar
+
+bool evening2_firstBar               = false
+bool evening2_secondBar              = false
+bool evening2_thirdBar               = false
+
+[evening2_isHighestHigh]  = f_isHighest(2, 3, hlLengthCheck)
+if close[2] < open[2] and averageSpreadTaken[2]  and spread[2] > spreadAvg and evening2_isHighestHigh
+    evening2_firstBar := true
+
+if doji[1] or shootingStar[1] or spinningTopWhite[1] or spinningTopBlack[1] or gravestoneDoji[1]
+    evening2_secondBar := true
+
+if close > open and close < close[2] and marubozuDnBar
+    evening2_thirdBar := true
+
+eveningStar2() => sms and evening2_firstBar and evening2_secondBar and evening2_thirdBar
+
 //------------------------------------------------------------------------------
 // Tension zone
 barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
@@ -763,8 +942,6 @@ barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : n
 //Stalled pattern 
 barcolor(bullishStalled() or bearishStalled() ? color.yellow : na)
 
-//Tower top/bottom pattern 
-
 // three white soldiers / three black crows
 barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
 
@@ -775,6 +952,9 @@ barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yello
 barcolor(nr7() ? color.yellow : na)
 barcolor(nr7f() ? color.orange : na)
 
+//outside bar
+barcolor(whiteOutsideBar() or blackOutsideBar() ? color.purple : na)
+
 // Engulfing
 barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
 
@@ -782,7 +962,13 @@ barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
 barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
 
 // Morning/Evening Star
-barcolor(morningStar() or eveningStar() ? color.purple : na)
+barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() ? color.purple : na)
+
+//Triangle
+barcolor(ascendingTriangle() ? color.white : na)
+barcolor(descendingTriangle() ? color.white : na)
+barcolor(symmetricalTriangle() ? color.white : na)
+barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
 
 // x = bar_index
 // y = low
