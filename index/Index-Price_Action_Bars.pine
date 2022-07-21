@@ -651,7 +651,7 @@ if spreadTakenByUpShadow()
 
 [engulfing_isLowestLow]  = f_isLowest(2, hlLengthCheck)
 
-whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and engulfing_isLowestLow
+whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and (engulfing_isLowestLow or lowestBarCheck())
 
 // black
 if close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
@@ -665,7 +665,8 @@ if spreadTakenByDnShadow()
 
 [engulfing_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
 
-blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and engulfing_isHighestHigh
+
+blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and (engulfing_isHighestHigh or highestBarCheck())
 
 //=========================================================================|
 //                     MORNING/EVENING STAR                                | 
@@ -712,6 +713,8 @@ barcolor(falseBreakDown1 or falseBreakDown2 or falseBreakDown3? color.orange : n
 //fakey
 barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4 ? color.silver : na)
 barcolor(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4 ? color.silver : na)
+alertcondition(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4, title="Fakey up")
+alertcondition(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4, title="Fakey down")
 
 // rising/failling three
 barcolor(risingThree() or faillingThree() ? color.yellow : na)
@@ -731,12 +734,15 @@ barcolor(nr7f() ? color.orange : na)
 
 // Engulfing
 barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
+alertcondition(whiteEngulfing() or blackEngulfing(), title="Engulfing")
 
 // Kangaroo
 barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
+alertcondition(topKangaroo() or bottomKangaroo(), title="Kangaroo Tail")
 
 // Morning/Evening Star
 barcolor(morningStar() or eveningStar() ? color.purple : na)
+alertcondition(morningStar() or eveningStar(), title="Morning/Evening Star")
 
 // x = bar_index
 // y = low
