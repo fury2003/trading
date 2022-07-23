@@ -199,38 +199,31 @@ ascendingChannelBreakout() => scb and ascendingChannel_fourthBar and ascendingCh
 bool bullishStalled_thirdBar      = false
 bool bullishStalled_secondBar     = false
 bool bullishStalled_firstBar      = false
-bool bullishStalled_reverserBar   = false
 
-if close[3] > open[3] and marubozuUpBar[3]
+if close[2] > open[2] and marubozuUpBar[2] and spread[2] > spreadAvg and range[2] > rangeAvg
     bullishStalled_thirdBar := true
 
-if close[2] > open[2] and close[2] > close[3] and (close[2] - open[2]) > (close[1] - open[1])
+if close[1] > open[1] and close[1] > close[2] and spread[1] < spread[2] and range[1] < range[2]
     bullishStalled_secondBar := true
 
-if close[1] > open[1] and close[1] > close[2] and open[1] == close[2] and (doji[1] or spinningTopWhite[1] or averageSpreadTaken[1] or shootingStar[1])
+if close > open and close > close[1] and close > open[3]  and spread < spread[1] and range < range[1] and smallBody
     bullishStalled_firstBar := true
 
-if  close < open[1] and close <= (close[2] + open[2])/2
-    bullishStalled_reverserBar := true
 
 bullishStalled() => ssp and bullishStalled_firstBar and bullishStalled_secondBar and bullishStalled_thirdBar
 
 bool bearishStalled_thirdBar      = false
 bool bearishStalled_secondBar     = false
 bool bearishStalled_firstBar      = false
-bool bearishStalled_reverserBar   = false
 
-if close[3] < open[3] and marubozuDnBar[3]
+if close[2] < open[2] and marubozuDnBar[2] and spread[2] > spreadAvg and range[2] > rangeAvg
     bearishStalled_thirdBar := true
 
-if close[2] < open[2] and close[2] < close[3] and (open[2] - close[2]) > (open[1] - close[1])
+if close[1] < open[1] and close[1] < close[2] and spread[1] < spread[2] and range[1] < range[2]
     bearishStalled_secondBar := true
 
-if close[1] < open[1] and close[1] < close[2] and open[1] == close[2] and (doji[1] or spinningTopBlack[1] or averageSpreadTaken[1] or hammer[1])
+if close < open and close < close[1] and close < open[3] and spread < spread[1] and range < range[1] and smallBody
     bearishStalled_firstBar := true
-
-if  close > open[1] and close >= (close[2] + open[2])/2
-    bearishStalled_reverserBar := true
 
 bearishStalled() => ssp and bearishStalled_thirdBar and bearishStalled_secondBar and bearishStalled_firstBar
 
@@ -808,7 +801,7 @@ if close <= low + (high - low)/3 and open <= low + (high - low)/3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     topKgr_closeInsidePreviousBar := true
 
-if upShadow >= 2 * averageTopWickSize 
+if upShadow >= 2 * averageTopWickSize and range > range[1]
     topKgr_wickVolatility := true
 
 if highestBarCheck()
@@ -835,7 +828,7 @@ if close >= high - (high - low) / 3 and open >= high - (high - low) / 3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     bottomKgr_closeInsidePreviousBar := true
 
-if dnShadow >= 2 * averageBottomWickSize 
+if dnShadow >= 2 * averageBottomWickSize and range > range[1]
     bottomKgr_wickVolatility := true
 
 if lowestBarCheck()
@@ -1015,7 +1008,7 @@ barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : n
 barcolor(risingThreeFail() or fallingThreeFail() ? color.orange : na)
 
 //Stalled pattern 
-barcolor(bullishStalled() or bearishStalled() ? color.yellow : na)
+barcolor(bullishStalled() or bearishStalled() ? color.blue : na)
 
 // three white soldiers / three black crows
 barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
@@ -1047,4 +1040,3 @@ barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
 //Pinbar
 barcolor(spb and bullishPinbar ? color.lime : na)
 barcolor(spb and bearishPinbar ? color.maroon : na)
-
