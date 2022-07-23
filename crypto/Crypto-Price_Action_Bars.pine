@@ -2,28 +2,26 @@
 study("Crypto - Price Action Bars", overlay=true)
 
 sob                   = input(true, title="Show Outside bars?")
+spb                   = input(true, title="Show Pinbar?")
+senf                  = input(true, title="Show Engulfing Bar?")
+skgr                  = input(true, title="Show Kangaroo Tail?")
+sms                   = input(true, title="Show Morning/Evening Star?")
 srft                  = input(true, title="Show Three Rising/Failing Bars?")
-srftfb                = input(true, title="Show Three Rising/Failing Bars False Break?")
 s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
 satr                  = input(true, title="Show Ascending Triangle?")
 sdtr                  = input(true, title="Show Descending Triangle?")
 sstr                  = input(true, title="Show Symmetrical Triangle?")
 stz                   = input(true, title="Show Tension zone?")
-stzfb                 = input(true, title="Show Tension zone false break?")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
 ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
 scb                   = input(true, title="Show Channel Break Out?")
 snr7                  = input(true, title="Show NR7?")
-snr7f                 = input(true, title="Show NR7 False-break?")
-senf                  = input(true, title="Show Engulfing Bar?")
-skgr                  = input(true, title="Show Kangaroo Tail?")
-sms                   = input(true, title="Show Morning/Evening Star?")
-pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
-pblb                  = input(2, minval=1, maxval=100, title="Pin Bars Look Back Period To Define The Trend of Highs and Lows")
-eav                   = input(7, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
+eav                   = input(8, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
+wav                   = input(13, minval=1, maxval=100, title="EMA Depth For Wick Average/Volatility")
+hlLengthCheck         = input(8, minval=1, maxval=99, title="Highest/Lowest Length Check")
 insideBarMinSpread    = input(40, minval=1, maxval=99, title="Tension Zone. Percentage Input For First Inside Bar. What % The Wick Of Candle Has To Be Compared To Mother Bar")
 pctShadow             = input(50, minval=1, maxval=99, title="Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
-hlLengthCheck         = input(10, minval=1, maxval=99, title="Highest/Lowest Length Check")
+pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
 
 // Inside bar
 minSpreadInsideBar = insideBarMinSpread/100
@@ -44,12 +42,27 @@ whiteBody = open < close
 blackBody = open > close
 
 // EMA
-spreadAvg            = ema(spread, eav)
-rangeAvg             = ema(range, eav)
-averagTopWickSize    = sma(upShadow, 50)
-averagBottomWickSize = sma(dnShadow, 50)
+spreadAvg             = ema(spread, eav)
+rangeAvg              = ema(range, eav)
+averageTopWickSize    = sma(upShadow, wav)
+averageBottomWickSize = sma(dnShadow, wav)
 
-// highest check
+longBody  = spread > spreadAvg
+smallBody = spread < spreadAvg
+bodyMiddle = spread / 2 + bodyLow
+
+// smallest spread check
+f_isSmallest(start_index, end_index) =>
+    bool isSmallestSpread = true
+    for i = start_index to end_index
+        if spread > spread[i] 
+            isSmallestSpread := false
+            break
+
+	_isSmallestSpread = isSmallestSpread
+    [_isSmallestSpread]
+
+// lowest check
 f_isLowest(lowest_index, start_index, end_index) =>
     bool isLowestLow = true
     for i = start_index to end_index
@@ -59,7 +72,7 @@ f_isLowest(lowest_index, start_index, end_index) =>
 
 	_isLowestLow = isLowestLow
     [_isLowestLow]
-
+// highest check
 f_isHighest(highest_index, start_index, end_index) =>
     bool isHighestHigh = true
     for i = start_index to end_index
@@ -91,17 +104,17 @@ marubozuUpBar = close > open and rangeTakenByBothShadows() and spreadTakenByUpSh
 marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnShadow()
 
 ///PinBars
-bullishPinbar() =>  open > high - (range * pctCPO) and close > high - (range * pctCPO) and low <= lowest(pblb) ? 1 : 0
-bearishPinbar() =>  open < high - (range *  pctCp) and close < high - (range * pctCp) and high >= highest(pblb) ? 1 : 0
+[isSmallestSpread]  = f_isSmallest(1, 3)
+bullishPinbar = spread <= spreadAvg/3 and isSmallestSpread and lowestBarCheck() and dnShadow > averageBottomWickSize*2 and upShadow*2 < dnShadow
+bearishPinbar = spread <= spreadAvg/3 and isSmallestSpread and highestBarCheck() and upShadow > averageTopWickSize*2 and upShadow > dnShadow*2
 
-//Piercing bar (>=0.5)
-pctPiercing = 50/100
-bearishPiercing()    =>  (open > close[1] or high > high[1]) and ((open - close) >= ((close[1] - open[1])*pctPiercing))
-bullishPiercing()    =>  (open < close[1] or low < low[1])   and (close - open) >= ((open[1] - close[1])*pctPiercing) ? 1 : 0
+//Piercing bar
+bullishPiercing = blackBody[1] and longBody[1] and whiteBody and open <= low[1] and close >= bodyMiddle[1] and close < open[1]
+bearishPiercing = whiteBody[1] and longBody[1] and blackBody and open >= high[1] and close <= bodyMiddle[1] and close > open[1]
 
 // Engulfing bar
-bearishEngulfing()  => close < open[1] and bigSpreadTaken and open >= close[1]
-bullishEngulfing()  => close > open[1] and bigSpreadTaken and open <= close[1]
+bearishEngulfing = blackBody and longBody and whiteBody[1] and smallBody[1] and close <= open[1] and open >= close[1] and ( close < open[1] or open > close[1] )
+bullishEngulfing = whiteBody and longBody and blackBody[1] and smallBody[1] and close >= open[1] and open <= close[1] and ( close > open[1] or open < close[1] )
 
 //Doji 
 dojiBodyPercent = 5.0
@@ -122,8 +135,8 @@ factor = 2.0 // shows the number of times the shadow dominates the candlestick b
 shadowPercent = 5.0 // size of shadows
 hasUpShadow = upShadow > shadowPercent / 100 * range
 hasDnShadow = dnShadow > shadowPercent / 100 * range
-shootingStar = spread < spreadAvg and spread > 0 and bodyHigh < hl2 and upShadow >= factor * spread and not hasDnShadow
-hammer       = spread < spreadAvg and spread > 0 and bodyLow > hl2 and dnShadow >= factor * spread and not hasUpShadow
+shootingStar = smallBody and spread > 0 and bodyHigh < hl2 and upShadow >= factor * spread and not hasDnShadow
+hammer       = smallBody and spread > 0 and bodyLow > hl2 and dnShadow >= factor * spread and not hasUpShadow
 
 //=========================================================================|
 //               ASCENDING/DECREASING CHANNEL BREAK OUT                    | 
@@ -306,7 +319,6 @@ if high[1] < high[2] and low[1] < low[2] and close[1] >= open[4]
 
 descendingTriangle() => sdtr and descTriangle_firstBar and descTriangle_secondBar and descTriangle_thirdBar and descTriangle_fourthBar
 
-
 //=========================================================================|
 //                     SYMMETRICAL TRIANGLE                                | 
 //=========================================================================|
@@ -443,10 +455,10 @@ if close[2]>=open[5] and open[2] <= close[5] and close[2]<=close[5] and high[2] 
 if close[1] >= close[5] 
     rising3fb_fifthBar := true
 
-if bearishPiercing() or bearishEngulfing()
+if bearishPiercing or bearishEngulfing or bearishPinbar
     rising3fb_reverseBar := true
 
-risingThreeFalseBreak() => srftfb and rising3fb_firstBar and rising3fb_secondBar and rising3fb_thirdBar and rising3fb_fourthBar and rising3fb_fifthBar and rising3fb_reverseBar
+risingThreeFalseBreak() => srft and rising3fb_firstBar and rising3fb_secondBar and rising3fb_thirdBar and rising3fb_fourthBar and rising3fb_fifthBar and rising3fb_reverseBar
 
 // Failling three false break| Mother maru red - green/red - green/red - green/red - Maru red - Piercing up
 bool failling3fb_firstBar     = false
@@ -471,10 +483,10 @@ if close[2] >= close[5] and close[2] <= open[5] and open[2] >= close[5] and high
 if close[1] <= close[5]
     failling3fb_fifthBar :=  true
 
-if  bullishPiercing() or bullishEngulfing()
+if  bullishPiercing or bullishEngulfing or bullishPinbar
     failling3fb_reverseBar := true
 
-faillingThreeFalseBreak() => srftfb and failling3fb_firstBar and failling3fb_secondBar and failling3fb_thirdBar and failling3fb_fourthBar and failling3fb_fifthBar and failling3fb_reverseBar
+faillingThreeFalseBreak() => srft and failling3fb_firstBar and failling3fb_secondBar and failling3fb_thirdBar and failling3fb_fourthBar and failling3fb_fifthBar and failling3fb_reverseBar
 
 //=========================================================================|
 //                     TENSION ZONE BREAK                                  | 
@@ -527,71 +539,74 @@ up_fourthGRGGR()    => close[4] > open[4] and open[3] <= close[4] and close[3] >
 up_thirdGRGGR()     => close[3] < open[3] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
 up_secondGRGGR()    => close[2] > open[2] and close[1] > close[2] ? 1 : 0
 up_firstGRGGR()     => close[1] > open[1] ? 1 : 0
-falseBreakUp1  = stzfb and up_fourthGRGGR() and up_thirdGRGGR() and up_secondGRGGR() and up_firstGRGGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumGreenBarSpread()
+falseBreakUp1  = stz and up_fourthGRGGR() and up_thirdGRGGR() and up_secondGRGGR() and up_firstGRGGR() and (bearishPiercing or shootingStar or bearishEngulfing) and minimumGreenBarSpread()
 
 // False break up | red - green - red - green(false break) - reverse
 up_fourthRGRGR()    => close[4] < open[4] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
 up_thirdRGRGR()     => close[3] > open[3] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
 up_secondRGRGR()    => close[2] < open[2] and close[1] > close[2] ? 1 : 0
 up_firstRGRGR()     => close[1] > open[1] ? 1 : 0
-falseBreakUp2  = stzfb and up_fourthRGRGR() and up_thirdRGRGR() and up_secondRGRGR() and up_firstRGRGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumRedBarSpread()
+falseBreakUp2  = stz and up_fourthRGRGR() and up_thirdRGRGR() and up_secondRGRGR() and up_firstRGRGR() and (bearishPiercing or  shootingStar or bearishEngulfing) and minimumRedBarSpread()
 
 // False break up | red - green - green - green(false break) - reverse
 up_fourthRGGGR()    => close[4] < open[4] ? 1 : 0
 up_thirdRGGGR()     => close[3] > open[3] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
 up_secondRGGGR()    => close[2] > open[2] and close[2] <= close[3] and open[2] >= open[3] ? 1 : 0
 up_firstRGGGR()     => close[1] > open[1] and close[1] > close[2] ? 1 : 0
-falseBreakUp3  = stzfb and up_fourthRGGGR() and up_thirdRGGGR() and up_secondRGGGR() and up_firstRGGGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumRedBarSpread()
+falseBreakUp3  = stz and up_fourthRGGGR() and up_thirdRGGGR() and up_secondRGGGR() and up_firstRGGGR() and (bearishPiercing or shootingStar or bearishEngulfing) and minimumRedBarSpread()
 
 // False break down | red - green - red - red(false break) - reverse
 down_fourthRGRRR()    => close[4] < open[4] ? 1 : 0
 down_thirdRGRRR()     => close[3] > open[3] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
 down_secondRGRRR()    => close[2] < open[2] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
 down_firstRGRRR()     => close[1] < open[1] and close[1] < close[2] ? 1 : 0
-falseBreakDown1  = stzfb and down_fourthRGRRR() and down_thirdRGRRR() and down_secondRGRRR() and down_firstRGRRR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumRedBarSpread()
+falseBreakDown1  = stz and down_fourthRGRRR() and down_thirdRGRRR() and down_secondRGRRR() and down_firstRGRRR() and (bullishPiercing or hammer or bullishEngulfing) and minimumRedBarSpread()
 
 // False break down | green - red - green - red(false break) - reverse
 down_fourthGRGRR()    => close[4] > open[4] and open[3] <= close[4] and close[3] >= open[4] ? 1 : 0
 down_thirdGRGRR()     => close[3] < open[3] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
 down_secondGRGRR()    => close[2] > open[2] and close[1] < close[2] ? 1 : 0
 down_firstGRGRR()     => close[1] > open[1] ? 1 : 0
-falseBreakDown2  = stzfb and down_fourthGRGRR() and down_thirdGRGRR() and down_secondGRGRR() and down_firstGRGRR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumGreenBarSpread()
+falseBreakDown2  = stz and down_fourthGRGRR() and down_thirdGRGRR() and down_secondGRGRR() and down_firstGRGRR() and (bullishPiercing or hammer or bullishEngulfing) and minimumGreenBarSpread()
 
 // False break down | red - green - red - green(false break) - reverse
 down_fourthRGRGR()    => close[4] < open[4] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
 down_thirdRGRGR()     => close[3] > open[3] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
 down_secondRGRGR()    => close[2] < open[2] and close[1] < open[2] ? 1 : 0
 down_firstRGRGR()     => close[1] > open[1] ? 1 : 0
-falseBreakDown3  = stzfb and down_fourthRGRGR() and down_thirdRGRGR() and down_secondRGRGR() and down_firstRGRGR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumRedBarSpread()
+falseBreakDown3  = stz and down_fourthRGRGR() and down_thirdRGRGR() and down_secondRGRGR() and down_firstRGRGR() and (bullishPiercing or hammer or bullishEngulfing) and minimumRedBarSpread()
 
 //=========================================================================|
 //                     FAKEY                                               | 
 //=========================================================================|
 // fakey shooting star
+fakeyUpShadow = (upShadow >= spread*3 or upShadow >= 3*averageTopWickSize) and highestBarCheck() and upShadow > dnShadow*2
+fakeyDnShadow = (dnShadow >= spread*3 or dnShadow >= 3*averageBottomWickSize) and lowestBarCheck() and upShadow*2 < dnShadow 
+
 // green - red - shooting star
 fakeyUp1_secondGreenBar()       => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
 fakeyUp1_firstRedBar()          => close[1] <= open[1] ? 1 : 0 
-fakeyUp1_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
+fakeyUp1_shootingStarBar()      => high > high[1] and high > high[2] and fakeyUpShadow ? 1 : 0
 // and close <= open[1] and close >= close[1]
 fakey_up1 = sfk and fakeyUp1_secondGreenBar() and fakeyUp1_firstRedBar() and fakeyUp1_shootingStarBar() 
 
 // green - green - shooting star
 fakeyUp2_secondGreenBar()       => close[2] > open[2] and close[1] <= open[2] ? 1 : 0
 fakeyU2_firstGreenBar()         => close[1] >= open[1] and close <= close[2] ? 1 : 0 
-fakeyUp2_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
+fakeyUp2_shootingStarBar()      => high > high[1] and high > high[2] and fakeyUpShadow ? 1 : 0
 fakey_up2 = sfk and fakeyUp2_secondGreenBar() and fakeyU2_firstGreenBar() and fakeyUp2_shootingStarBar()
 
 // red - green - shooting star
 fakeyUp3_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
 fakeyUp3_firstGreenBar()   => close[1] >= open[1] and close <= close[1] ? 1 : 0
-fakeyUp3_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
+fakeyUp3_shootingStarBar() => high > high[1] and high > high[2] and fakeyUpShadow ? 1 : 0
 //and close <= close[1] and close >= open[1]
 fakey_up3 = sfk and fakeyUp3_secondRedBar() and fakeyUp3_firstGreenBar() and fakeyUp3_shootingStarBar()
 
 // red - red - shooting star
 fakeyUp4_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
-fakeyUp4_firstRedBar()     => close[1] <= open[1] and close >= open[2] ? 1 : 0
-fakeyUp4_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
+fakeyUp4_firstRedBar()     => close[1] <= open[1] and close >= open[2] and close[1] >= low[2] ? 1 : 0
+fakeyUp4_shootingStarBar() => high > high[1] and high > high[2] and fakeyUpShadow ? 1 : 0
 //and close <= close[1] and close >= open[1]
 fakey_up4 = sfk and fakeyUp4_secondRedBar() and fakeyUp4_firstRedBar() and fakeyUp4_shootingStarBar()
 
@@ -599,25 +614,25 @@ fakey_up4 = sfk and fakeyUp4_secondRedBar() and fakeyUp4_firstRedBar() and fakey
 // red - green - hammer
 fakeyDown1_secondRedBar()  => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
 fakeyDown1_firstGreenBar() => close[1] >= open[1] and close >= open[1] ? 1 : 0
-fakeyDown1_hammerBar()     => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
+fakeyDown1_hammerBar()     => low < low[1] and low < low[2] and fakeyDnShadow ? 1 : 0
 fakey_down1 = sfk and fakeyDown1_secondRedBar() and fakeyDown1_firstGreenBar() and fakeyDown1_hammerBar() 
 
 // green - red - hammer
 fakeyDown2_secondGreenBar()  => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
 fakeyDown2_firstRedBar()     => close[1] <= open[1] and close > close[1] ? 1 : 0
-fakeyDown2_hammerBar()       => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
+fakeyDown2_hammerBar()       => low < low[1] and low < low[2] and fakeyDnShadow ? 1 : 0
 fakey_down2 = sfk and fakeyDown2_secondGreenBar() and fakeyDown2_firstRedBar() and fakeyDown2_hammerBar()  
 
 // red - red - hammer
 fakeyDown3_secondRedBar() => close[2] < open[2] and open[1] >= close[2] and close[1] >= close[2] ? 1 : 0
 fakeyDown3_firstRedBar()  => close[1] <= open[1] and close <= open[2] ? 1 : 0
-fakeyDown3_hammerBar()      => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
+fakeyDown3_hammerBar()      => low < low[1] and low < low[2] and fakeyDnShadow ? 1 : 0
 fakey_down3 = sfk and fakeyDown3_secondRedBar() and fakeyDown3_firstRedBar() and fakeyDown3_hammerBar()
 
 // green - green - hammer
 fakeyDown4_secondGreenBar()  => close[2] > open[2] and close[1] <= close[2] ? 1 : 0
 fakeyDown4_firstGreenBar()   => close[1] >= open[1] ? 1 : 0
-fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
+fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and fakeyDnShadow ? 1 : 0
 fakey_down4 = sfk and fakeyDown4_secondGreenBar() and fakeyDown4_firstGreenBar() and fakeyDown4_hammerBar() 
 
 //=========================================================================|
@@ -698,10 +713,10 @@ if nr7f_thirdInsideBar
 if nr7f_secondInsideBar
     nr7f_secondBar := true
 
-if close[1] > open[1] and (bearishPiercing() or bearishEngulfing())
+if close[1] > open[1] and (bearishPiercing or bearishEngulfing)
     nr7f_reverseBar := true
 
-if close[1] < open[1] and (bullishPiercing() or bullishEngulfing())
+if close[1] < open[1] and (bullishPiercing or bullishEngulfing)
     nr7f_reverseBar := true
 
 nr7f() => snr7 and nr7f_seventhBar and nr7f_sixthBar and nr7f_fifthBar and nr7f_fourthBar and nr7f_thirdBar and nr7f_secondBar and nr7f_reverseBar
@@ -734,7 +749,7 @@ if close <= low + (high - low)/3 and open <= low + (high - low)/3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     topKgr_closeInsidePreviousBar := true
 
-if upShadow >= 2 * averagTopWickSize 
+if upShadow >= 2 * averageTopWickSize 
     topKgr_wickVolatility := true
 
 if highestBarCheck()
@@ -749,8 +764,6 @@ bool bottomKgr_closeNearTop            = false
 bool bottomKgr_closeInsidePreviousBar  = false
 bool bottomKgr_biggerRangePreviousBar  = false
 
-averagebottomwicksize = sma(dnShadow, 50)
-
 if range - range[1] >= 0
     bottomKgr_biggerRangePreviousBar := true
 
@@ -763,7 +776,7 @@ if close >= high - (high - low) / 3 and open >= high - (high - low) / 3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     bottomKgr_closeInsidePreviousBar := true
 
-if dnShadow >= 2 * averagBottomWickSize 
+if dnShadow >= 2 * averageBottomWickSize 
     bottomKgr_wickVolatility := true
 
 if lowestBarCheck()
@@ -785,7 +798,7 @@ bool blackOutside_spaceOnTheLeft   = false
 if close > open and close[1] < open[1] and close >= open[1] and open <= close[1] and high > high[1] and low < low[1]
     whiteOutside_isOutside := true
 
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+if longBody and spread < spreadAvg*2 and range >= range[1]
     whiteOutside_volatility := true
 
 if lowestBarCheckWithParam(2)
@@ -796,7 +809,7 @@ whiteOutsideBar() => sob and whiteOutside_isOutside and whiteOutside_volatility 
 if close < open and close[1] > open[1] and close <= open[1] and open >= close[1] and high > high[1] and low < low[1]
     blackOutside_isOutside := true
 
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+if longBody and spread < spreadAvg*2 and range >= range[1]
     blackOutside_volatility := true
 
 if highestBarCheckWithParam(2)
@@ -821,10 +834,10 @@ bool blackEngulfing_spaceOnTheLeft   = false
 bool blackEngulfing_closeNearLow     = false
 
 // white
-if close > open and close[1] < open[1] and close >= open[1] and open <= close[1] and averageSpreadTaken[1]
+if close[1] < open[1] and close >= open[1] and open <= close[1] and averageSpreadTaken[1]
     whiteEngulfing_isEngulfing := true
 
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+if close > open and longBody and spread < spreadAvg*2 and range >= range[1] and range >= range[2] and range >= range[3]
     whiteEngulfing_volatility := true
 
 if spreadTakenByUpShadow()
@@ -840,7 +853,7 @@ whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volat
 if close < open and close[1] > open[1] and close <= open[1] and open >= close[1] and averageSpreadTaken[1]
     blackEngulfing_isEngulfing := true
 
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
+if longBody and spread < spreadAvg*2 and range >= range[1] and range >= range[2] and range >= range[3]
     blackEngulfing_volatility := true
 
 if spreadTakenByDnShadow()
@@ -860,11 +873,11 @@ bool morning_firstBar                = false
 bool morning_secondBar               = false
 bool morning_thirdBar                = false
 
-if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and spread > spreadAvg
+if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and longBody
     morning_firstBar := true
 
 [morning_isLowestLow]  = f_isLowest(1, 2, hlLengthCheck)
-if doji[1] or (hammer[1] and morning_isLowestLow) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and upShadow[1] < averagTopWickSize)
+if doji[1] or (hammer[1] and morning_isLowestLow) or bullishPinbar[1]
     morning_secondBar := true
 
 if close > open and close > (open[2] + close[2])/2 and close > high[1] and marubozuUpBar
@@ -893,11 +906,11 @@ bool evening_firstBar               = false
 bool evening_secondBar              = false
 bool evening_thirdBar               = false
 
-if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and spread > spreadAvg
+if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and longBody
     evening_firstBar := true
 
 [evening_isHighestHigh]  = f_isHighest(1, 2, hlLengthCheck)
-if doji[1] or (shootingStar[1] and evening_isHighestHigh) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and dnShadow[1] < averagBottomWickSize)
+if doji[1] or (shootingStar[1] and evening_isHighestHigh) or bearishPinbar[1]
     evening_secondBar := true
 
 if close < open and close < (open[2] + close[2])/2 and close < low[1] and marubozuDnBar
@@ -964,18 +977,12 @@ barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
 // Morning/Evening Star
 barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() ? color.purple : na)
 
+
 //Triangle
-barcolor(ascendingTriangle() ? color.white : na)
 barcolor(descendingTriangle() ? color.white : na)
 barcolor(symmetricalTriangle() ? color.white : na)
 barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
 
-// x = bar_index
-// y = low
-// txt = tostring(open)
-// label.new(x, y, txt, color=color.red)
-
-// a = bar_index
-// b = high
-// text = tostring(close[1])
-// label.new(a, b, text, color=color.green)
+//Pinbar
+barcolor(spb and bullishPinbar ? color.lime : na)
+barcolor(spb and bearishPinbar ? color.maroon : na)
