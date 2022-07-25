@@ -8,8 +8,6 @@ skgr                  = input(true, title="Show Kangaroo Tail?")
 sms                   = input(true, title="Show Morning/Evening Star?")
 srft                  = input(true, title="Show Three Rising/Failing Bars?")
 s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
-satr                  = input(true, title="Show Ascending Triangle?")
-sdtr                  = input(true, title="Show Descending Triangle?")
 sstr                  = input(true, title="Show Symmetrical Triangle?")
 stz                   = input(true, title="Show Tension zone?")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
@@ -186,6 +184,56 @@ if close <= open[4] and marubozuDnBar
 
 ascendingChannelBreakout() => scb and ascendingChannel_fourthBar and ascendingChannel_thirdBar and ascendingChannel_secondBar and ascendingChannel_firstBar and ascendingChannel_breakoutBar
 
+bool ascChannelFB_fourthBar     = false
+bool ascChannelFB_thirdBar      = false
+bool ascChannelFB_secondBar     = false
+bool ascChannelFB_falseBreakBar = false
+bool ascChannelFB_reverseBar    = false
+
+// ascending channel false break
+[channel_isLowestLow]  = f_isLowest(4, 5, hlLengthCheck)
+if close[4] > open[4] and (averageSpreadTaken[4] or channel_isLowestLow)
+    ascChannelFB_fourthBar := true
+
+if low[3] > low[4] and high[3] > high[4]
+    ascChannelFB_thirdBar := true
+
+if low[2] > low[3] and high[2] > high[3]
+    ascChannelFB_secondBar := true
+
+if close[1] < close[2] and low[1] < low[2] and longBody[1]
+    ascChannelFB_falseBreakBar := true
+
+if close > high[2] and close > open[1]
+    ascChannelFB_reverseBar := true
+
+ascendingChannelFalseBreak() => scb and ascChannelFB_fourthBar and ascChannelFB_thirdBar and ascChannelFB_secondBar and ascChannelFB_falseBreakBar and ascChannelFB_reverseBar  
+
+// descending channel false break
+bool desChannelFB_fourthBar     = false
+bool desChannelFB_thirdBar      = false
+bool desChannelFB_secondBar     = false
+bool desChannelFB_falseBreakBar = false
+bool desChannelFB_reverseBar    = false
+
+[channel_isHighestLow]  = f_isHighest(4, 5, hlLengthCheck)
+if close[4] < open[4] and (averageSpreadTaken[4] or channel_isHighestLow)
+    desChannelFB_fourthBar := true
+
+if low[3] < low[4] and high[3] < high[4]
+    desChannelFB_thirdBar := true
+
+if low[2] < low[3] and high[2] < high[3]
+    desChannelFB_secondBar := true
+
+if close[1] > close[2] and high[1] > high[2] and longBody[1]
+    desChannelFB_falseBreakBar := true
+
+if close < low[2] and close < open[1]
+    desChannelFB_reverseBar := true
+
+decreasingChannelFalseBreak() => scb and desChannelFB_fourthBar and desChannelFB_thirdBar and desChannelFB_secondBar and desChannelFB_falseBreakBar and desChannelFB_reverseBar
+
 //=========================================================================|
 //                    BULLISH/BREARISH STALLED PATTERN                     | 
 //=========================================================================|
@@ -276,50 +324,6 @@ if close < open and close < low[1] and mediumLongBody and dnShadow < 2*averageBo
 threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and threeCrows_thirdBar and threeCrows_fourthBar
 
 //=========================================================================|
-//                     ASCENDING TRIANGLE                                  | 
-//=========================================================================|
-bool ascTriangle_firstBar       = false
-bool ascTriangle_secondBar      = false
-bool ascTriangle_thirdBar       = false
-bool ascTriangle_fourthBar      = false
-
-if close[4] < open[4] and averageSpreadTaken[4]
-    ascTriangle_firstBar := true
-
-if low[3] < low[4] and open[3] >= close[4] and close[3] <= open[4] and close[3] >= close[4]
-    ascTriangle_secondBar := true
-
-if high[2] > high[3] and low[2] > low[3] 
-    ascTriangle_thirdBar := true
-
-if high[1] > high[2] and low[1] > low[2] and close[1] <= open[4]
-    ascTriangle_fourthBar := true
-
-ascendingTriangle() => satr and ascTriangle_firstBar and ascTriangle_secondBar and ascTriangle_thirdBar and ascTriangle_fourthBar
-
-//=========================================================================|
-//                     DESCENDING TRIANGLE                                 | 
-//=========================================================================|
-bool descTriangle_firstBar       = false
-bool descTriangle_secondBar      = false
-bool descTriangle_thirdBar       = false
-bool descTriangle_fourthBar      = false
-
-if close[4] > open[4] and averageSpreadTaken[4]
-    descTriangle_firstBar := true
-
-if low[3] > low[4] and high[3] < high[4] and open[3] <= close[4] and close[3] >= open[4] and close[3] <= close[4]
-    descTriangle_secondBar := true
-
-if high[2] < high[3] and low[2] < low[3]
-    descTriangle_thirdBar := true
-
-if high[1] < high[2] and low[1] < low[2] and close[1] >= open[4]
-    descTriangle_fourthBar := true
-
-descendingTriangle() => sdtr and descTriangle_firstBar and descTriangle_secondBar and descTriangle_thirdBar and descTriangle_fourthBar
-
-//=========================================================================|
 //                     SYMMETRICAL TRIANGLE                                | 
 //=========================================================================|
 bool symTriangle_firstBar       = false
@@ -327,16 +331,16 @@ bool symTriangle_secondBar      = false
 bool symTriangle_thirdBar       = false
 bool symTriangle_fourthBar      = false
 
-if range[4] > rangeAvg
+if range[4] > rangeAvg or spread[4] > spreadAvg
     symTriangle_firstBar := true
 
-if high[3] < high[4] and low[3] > low[4]
+if high[3] < high[4] and low[3] > low[4] 
     symTriangle_secondBar := true
 
-if high[2] < high[3] and low[2] > low[3]
+if high[2] < high[3] and low[2] > low[4] and spread[2] < spreadAvg
     symTriangle_thirdBar := true
 
-if (high[1] < high[2] and low[1] > low[2]) or ((high[1] < high[2] or low[1] > low[2]) and smallSpreadTaken[1])
+if high[1] < high[2] and low[1] > low[2] and spread[1] < spreadAvg
     symTriangle_fourthBar := true
 
 symmetricalTriangle() => sstr and symTriangle_firstBar and symTriangle_secondBar and symTriangle_thirdBar and symTriangle_fourthBar
@@ -377,11 +381,6 @@ symmetricalTriangleBreakout() => sstr and symBreakout_firstBar and symBreakout_s
 //=========================================================================|
 //                     RASING/FAILLING THREE                               | 
 //=========================================================================|
-// It occurs during an Uptrend;
-// The First and Fifth Candle are white and are longer than the other Three Candles of the Pattern
-// The Second, Third and Fourth Candle are fully contained within the Real Body of the First Candle
-// The Close of the Fifth Candle is above the Close of the First Candle
-// Rising three | Mother maru green - green/red - green/red - green/red - Maru green
 bool rising3_firstBar  = false
 bool rising3_secondBar = false
 bool rising3_thirdBar  = false
@@ -392,20 +391,19 @@ if close[4] > open[4]
     rising3_firstBar := averageSpreadTaken[4] 
 
 if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4] and high[3] < high[4] and low[3] > low[4]
-    rising3_secondBar := (high[3] - low[3]) >= ((close[4] - open[4])*minSpreadInsideBar)
+    rising3_secondBar := true
 
-if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4] and high[2] < high[4] and low[2] > low[4]
+if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4] 
     rising3_thirdBar := true
 
-if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4] and high[1] < high[4] and low[1] > low[4]
+if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4] 
     rising3_fourthBar := true
 
-if close > close[4] 
+if close > close[4] and upShadow < 2*averageTopWickSize and (mediumLongBody or bigSpreadTaken)
     rising3_fifthBar := true
 
 risingThree() => srft and rising3_firstBar and rising3_secondBar and rising3_thirdBar and rising3_fourthBar and rising3_fifthBar 
 
-// Failling three | Mother maru red - green/red - green/red - green/red - Maru red
 bool failling3_firstBar    = false
 bool failling3_secondBar   = false
 bool failling3_thirdBar    = false
@@ -416,15 +414,15 @@ if close[4] < open[4]
     failling3_firstBar := averageSpreadTaken[4]
 
 if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4] and high[3] < high[4] and low[3] > low[4]
-    failling3_secondBar := (high[3] - low[3]) >= ((open[4] - close[4])*minSpreadInsideBar)
+    failling3_secondBar := true
 
-if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] and high[2] < high[4] and low[2] > low[4]
+if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] 
     failling3_thirdBar := true
 
-if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] and high[1] < high[4] and low[1] > low[4]
+if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] 
     failling3_fourthBar := true
 
-if close < close[4]
+if close < close[4] and dnShadow < 2*averageBottomWickSize and (mediumLongBody or bigSpreadTaken)
     failling3_fifthBar :=  true
 
 faillingThree() => srft and failling3_firstBar and failling3_secondBar and failling3_thirdBar and failling3_fourthBar and failling3_fifthBar
@@ -444,7 +442,7 @@ if close[5] > open[5]
     rising3fb_firstBar := averageSpreadTaken[5] 
 
 if close[4] <= close[5] and close[4] >= open[5] and open[4] <= close[5] and high[4] < high[5] and low[4] > low[5]
-    rising3fb_secondBar := (high[4] - low[4]) >= ((close[5] - open[5])*minSpreadInsideBar)
+    rising3fb_secondBar := true
     
 if close[3]>=open[5] and open[3] <= close[5] and close[3]<=close[5] and high[3] < high[5] and low[3] > low[5]
     rising3fb_thirdBar := true
@@ -472,7 +470,7 @@ if close[5] < open[5]
     failling3fb_firstBar := averageSpreadTaken[5]
 
 if  close[4] >= close[5] and close[4] <= open[5] and open[4] >= close[5] and high[4] < high[5] and low[4] > low[5]
-    failling3fb_secondBar := (high[4] - low[4]) >= ((open[5] - close[5])*minSpreadInsideBar)
+    failling3fb_secondBar := true
 
 if close[3] >= close[5] and close[3] <= open[5] and open[3] >= close[5] and high[3] < high[5] and low[3] > low[5]
     failling3fb_thirdBar := true
@@ -560,7 +558,7 @@ firstGGR()   => close[1] < open[1] and close[1] >= open[1] and open[1] <= close[
 // red - green - red 
 thirdRGR()   => close[3] < open[3] ? 1 : 0
 secondRGR()  => close[2] > open[2] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
-firstRGR()   => close[1] < open[1] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
+firstRGR()   => close[1] < open[1] and open[1] <= close[2] and close[1] >= close[3] ? 1 : 0
 // and (close < close[1] or close > open[1])
 
 // red - green - green
@@ -1015,6 +1013,7 @@ barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
 
 // Channel break
 barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yellow : na)
+barcolor(ascendingChannelFalseBreak() or decreasingChannelFalseBreak()? color.orange : na)
 
 // NR7
 barcolor(nr7() ? color.yellow : na)
@@ -1033,7 +1032,6 @@ barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
 barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() ? color.purple : na)
 
 //Triangle
-barcolor(descendingTriangle() ? color.white : na)
 barcolor(symmetricalTriangle() ? color.white : na)
 barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
 
