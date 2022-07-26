@@ -27,7 +27,7 @@ showLast              = input(title="Show last", type=input.integer, defval=500,
 //=========================================================================|
 //                    Basic VSA Definitions                                | 
 //=========================================================================|
-volAvg = sma(volume,40)
+volAvg = sma(volume,34)
 volMean = stdev(volAvg,30)
 volUpBand3 = volAvg + (3*volMean)
 volUpBand2 = volAvg + (2*volMean)
@@ -41,7 +41,7 @@ C = close
 O = open
 midprice        = (H+L)/2
 spread          = (H-L)
-avgSpread       = sma(spread,40)
+avgSpread       = sma(spread,13)
 avgSpreadBar    = spread > avgSpread// to be checked
 wideRangeBar    = spread>(1.5*avgSpread)
 narrowRangeBar  = spread<(0.7*avgSpread)
@@ -286,8 +286,8 @@ plotshape(showed ? effDown and not sellKumo and not chikouOpenDown: na, style=sh
 // plotshape(showtkkj ? tkCrossUnderkj and not chikouOpenDown and not aosenDown : na, text = "KT", title="Tenkan crossunder Kijun", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black, show_last=showLast)
 
 // -----------------Aosen-----------------------
-plotshape(showaosenbreak ? aosenUp and not breakup and not tkCrossOverkj : na, text = "AU", title="Aosen Breakout Upward", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white, show_last=showLast)
-plotshape(showaosenbreak ? aosenDown and not breakdown and not tkCrossUnderkj : na, text = "AD", title="Aosen Breakout Downward", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black, show_last=showLast)
+plotshape(showaosenbreak ? (aosenUp and avgSpreadBar and upClose) and not breakup and not tkCrossOverkj : na, text = "AU", title="Aosen Breakout Upward", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white, show_last=showLast)
+plotshape(showaosenbreak ? (aosenDown and avgSpreadBar and downClose) and not breakdown and not tkCrossUnderkj : na, text = "AD", title="Aosen Breakout Downward", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black, show_last=showLast)
 // alertcondition(aosenUp and not breakup, title="Aosen break up")
 // alertcondition(aosenDown and not breakdown, title="Aosen break down")
 

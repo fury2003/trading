@@ -14,8 +14,6 @@ isActiveSecond             = input(false, "────── Second ichimoku�
 secondIchi                 = input("15", "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveThird              = input(false, "─────── Third ichimoku ────────", group="Time Frame Configuration")
 thirdIchi                  = input("60",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
-isActiveFourth             = input(false, "─────── Fourth ichimoku ───────", group="Time Frame Configuration")
-fourthIchi                 = input("240",  "► Time frame", type = input.resolution, group="Time Frame Configuration")
 isActiveFirstTenkan        = input(true,  "Tenkan TF1", group="Show Ichimoku")
 isActiveFirstAosen         = input(true,  "Aosen TF1", group="Show Ichimoku")
 isActiveFirstKijun         = input(false,  "Kijun TF1", group="Show Ichimoku")
@@ -30,10 +28,6 @@ isActiveThirdTenkan        = input(false,  "Tenkan TF3", group="Show Ichimoku")
 isActiveThirdKijun         = input(false,  "Kijun TF3", group="Show Ichimoku")
 isActiveThirdChikou        = input(false,  "Chikou TF3", group="Show Ichimoku")
 isActiveThirdKumo          = input(true,   "Kumo TF3", group="Show Ichimoku")
-isActiveFourthTenkan       = input(false,  "Tenkan TF4", group="Show Ichimoku")
-isActiveFourthKijun        = input(false,  "Kijun TF4", group="Show Ichimoku")
-isActiveFourthChikou       = input(false,  "Chikou TF4", group="Show Ichimoku")
-isActiveFourthKumo         = input(true,   "Kumo TF4", group="Show Ichimoku")
 isActiveMonoKumo           = input(true,   "Monochrome", group="Color Setting")
 conversionPeriods          = input(9, minval=1,  title="Conversion Line Periods", group="Ichimoku Setting")
 basePeriods                = input(26, minval=1, title="Base Line Periods", group="Ichimoku Setting")
@@ -61,9 +55,6 @@ colorDarkBlue=#3E4EBD
 colorVeryLightGreen=#9AD6B7
 colorLightGreen=#59BD89
 colorDarkGreen=#327E56
-colorVeryLightOrange=#F5D8A0
-colorLightOrange=#EEB448
-colorDarkOrange=#EB8412
 colorVeryLightPink=#E1AEF0
 colorLightPink=#CF83E9
 colorDarkPink=#B949DE
@@ -190,11 +181,6 @@ f_ichimokuData(_isActive, _tf) =>
     _minAosen      = _isShow ? min(_tenkan[displacement - 1],_kijun[displacement - 1]) : na
 	[_displacement, _tenkan, _kijun, _chikou, _SSA, _SSB, _middleKumo, _maxAosen, _minAosen]
 
-// --- Return chikou
-chikou_up = (close > high[26] and close > high[25] and close > high[24] and close > high[23] and close > high[22] and close > high[21] and close > high[20] and close > high[19] and close > high[18] and close > high[17] and close > high[16])
-chikou_dn = (close < low[26]  and close < low[25]  and close < low[24]  and close < low[23]  and close < low[22]  and close < low[21]  and close < low[20]  and close < low[19]  and close < low[18]  and close < low[17]  and close < low[16])
-chikou_clr = chikou_up ? color.purple : chikou_dn ? color.blue : color.silver
-
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————— FIRST ICHIMOKU  ——————————————————————————————————
 // ——————————————————————————————————————————————————————————————————————————————————————
@@ -206,7 +192,7 @@ chikou_clr = chikou_up ? color.purple : chikou_dn ? color.blue : color.silver
 // ————— Kijun
 //plot(isActiveFirstKijun ? firstKijun : na, color=colorDarkBlue, title="First Kijun", linewidth=1)
 // ————— Chikou
-plot(isActiveFirstChikou ? firstChikou : na, offset = -firstDisplacement, color=chikou_clr, title="First Chikou")
+plot(isActiveFirstChikou ? firstChikou : na, offset = -firstDisplacement, color=colorDarkBlue, title="First Chikou")
 
 // ————— SSA + SSB
 ssaFirst=plot(isActiveFirstKumo ? firstSSA : na, offset = firstDisplacement, color=colorLightBlue, title="First SSA", linewidth=1)
@@ -232,7 +218,7 @@ plot(isActiveSecondTenkan ? secondTenkan : na, color=colorLightGreen, title="Sec
 // ————— Kijun
 plot(isActiveSecondKijun ? secondKijun : na, color=colorDarkGreen, title="Second Kijun", linewidth=1)
 // ————— Chikou
-plot(isActiveSecondChikou ? secondChikou : na, offset = -secondDisplacement, color=chikou_clr, title="Second Chikou")
+plot(isActiveSecondChikou ? secondChikou : na, offset = -secondDisplacement, color=colorDarkGreen, title="Second Chikou")
 
 // ————— SSA + SSB
 ssaSecond=plot(isActiveSecondKumo ? secondSSA : na, offset = secondDisplacement, color=colorLightGreen, title="Second SSA", linewidth=1)
@@ -258,31 +244,12 @@ plot(isActiveThirdTenkan ? thirdTenkan : na, color=colorLightPink, title="Third 
 // ————— Kijun
 plot(isActiveThirdKijun ? thirdKijun : na, color=colorDarkPink, title="Third Kijun", linewidth=1)
 // ————— Chikou
-plot(isActiveThirdChikou ? thirdChikou : na, offset = -thirdDisplacement, color=chikou_clr, title="Third Chikou")
+plot(isActiveThirdChikou ? thirdChikou : na, offset = -thirdDisplacement, color=colorDarkPink, title="Third Chikou")
 
 // ————— SSA + SSB
 ssaThird=plot(isActiveThirdKumo ? thirdSSA : na, offset = thirdDisplacement, color=colorLightPink, title="Third SSA", linewidth=1)
 ssbThird=plot(isActiveThirdKumo ? thirdSSB : na, offset = thirdDisplacement, color=colorLightPink, title="Third SSB", linewidth=1)
 fill(ssaThird, ssbThird, color.new(isActiveMonoKumo ? colorDarkPink : (thirdSSA > thirdSSB ? colorVeryLightPink : colorDarkPink), transp=transp), title="Third Kumo")
-
-
-// ——————————————————————————————————————————————————————————————————————————————————————
-// ————————————————————————————————— FOURTH ICHIMOKU  ———————————————————————————————————
-// ——————————————————————————————————————————————————————————————————————————————————————
-
-[fourthDisplacement, fourthTenkan, fourthKijun, fourthChikou, fourthSSA, fourthSSB, fourthMiddleKumo, fourthMaxAosen, fourthMinAosen] = f_ichimokuData(isActiveFourth, fourthIchi)
-
-// ————— Tenkan
-plot(isActiveFourthTenkan ? fourthTenkan : na, color=colorLightOrange, title="Fourth Tenkan", linewidth=1)
-// ————— Kijun
-plot(isActiveFourthKijun ? fourthKijun : na, color=colorDarkOrange, title="Fourth Kijun", linewidth=1)
-// ————— Chikou
-plot(isActiveFourthChikou ? fourthChikou : na, offset = -fourthDisplacement, color=chikou_clr, title="Fourth Chikou")
-
-// ————— SSA + SSB
-ssaFourth=plot(isActiveFourthKumo ? fourthSSA : na, offset = fourthDisplacement, color=colorLightOrange, title="Fourth SSA", linewidth=1)
-ssbFourth=plot(isActiveFourthKumo ? fourthSSB : na, offset = fourthDisplacement, color=colorLightOrange, title="Fourth SSB", linewidth=1)
-fill(ssaFourth, ssbFourth, color.new(isActiveMonoKumo ? colorDarkOrange : (fourthSSA > fourthSSB ? colorVeryLightOrange : colorDarkOrange), transp=transp), title="Fourth Kumo")
 
 // ——————————————————————————————————————————————————————————————————————————————————————
 // ——————————————————————————————————————— LABEL ————————————————————————————————————————
@@ -303,11 +270,6 @@ var label thirdKijunLabel = na
 var label thirdChikouLabel = na
 var label thirdKumoLabel = na
 
-var label fourthTenkanLabel = na
-var label fourthKijunLabel = na
-var label fourthChikouLabel = na
-var label fourthKumoLabel = na
-
 label.delete(firstTenkanLabel)
 label.delete(firstKijunLabel)
 label.delete(firstChikouLabel)
@@ -322,11 +284,6 @@ label.delete(thirdTenkanLabel)
 label.delete(thirdKijunLabel)
 label.delete(thirdChikouLabel)
 label.delete(thirdKumoLabel)
-
-label.delete(fourthTenkanLabel)
-label.delete(fourthKijunLabel)
-label.delete(fourthChikouLabel)
-label.delete(fourthKumoLabel)
 
 if isActiveFirst and isActiveLabel and f_timeFrameResolutionInMinutes(firstIchi) >= f_resolutionInMinutes()
     offsetLabel=time+(timeOffset*labelOffset)
@@ -390,25 +347,3 @@ if isActiveThird and isActiveLabel and f_timeFrameResolutionInMinutes(thirdIchi)
         thirdKumoLabel:=label.new(x=time+offsetDisplacementThird,y=thirdMiddleKumo, xloc=xloc.bar_time, style=label.style_none)
         label.set_text(thirdKumoLabel, "Kumo "+f_resolutionInString(thirdIchi))
         label.set_textcolor(thirdKumoLabel, labelColor == 'Original' ? colorDarkPink : f_stringInColor(labelColor))
-
-if isActiveFourth and isActiveLabel and f_timeFrameResolutionInMinutes(fourthIchi) >= f_resolutionInMinutes()
-    offsetLabel=time+(timeOffset*labelOffset)
-    offsetFourth=labelOffset < 0 ? labelOffset : 0
-    offsetDisplacementFourth=timeOffset*(fourthDisplacement-labelOffset)
-    if isActiveFourthTenkan
-        fourthTenkanLabel:=label.new(x=offsetLabel, y=fourthTenkan[offsetFourth], xloc=xloc.bar_time, style=label.style_none)
-        label.set_text(fourthTenkanLabel, f_getTenkanText(fourthIchi, isActiveAbbreviation))
-        label.set_textcolor(fourthTenkanLabel, labelColor == 'Original' ? colorDarkOrange : f_stringInColor(labelColor))
-    if isActiveFourthKijun
-        fourthKijunLabel:=label.new(x=offsetLabel, y=fourthKijun[offsetFourth], xloc=xloc.bar_time, style=label.style_none)
-        label.set_text(fourthKijunLabel, f_getKijunText(fourthIchi, isActiveAbbreviation))
-        label.set_textcolor(fourthKijunLabel, labelColor == 'Original' ? colorDarkOrange : f_stringInColor(labelColor))
-    if isActiveFourthChikou
-        fourthChikouLabel:=label.new(x=time-offsetDisplacementFourth,y=fourthChikou[1], xloc=xloc.bar_time, style=label.style_none)
-        label.set_text(fourthChikouLabel, f_getChikouText(fourthIchi, isActiveAbbreviation))
-        label.set_textcolor(fourthChikouLabel, labelColor == 'Original' ? colorDarkOrange : f_stringInColor(labelColor))
-    if isActiveFourthKumo
-	    fourthKumoLabel:=label.new(x=time+offsetDisplacementFourth,y=fourthMiddleKumo, xloc=xloc.bar_time, style=label.style_none)
-        label.set_text(fourthKumoLabel, "Kumo "+f_resolutionInString(fourthIchi))
-        label.set_textcolor(fourthKumoLabel, labelColor == 'Original' ? colorDarkOrange : f_stringInColor(labelColor))
-
