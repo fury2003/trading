@@ -1,32 +1,19 @@
 //@version=4
 study("Index - Price Action Bars", overlay=true)
 
-// sob                   = input(true, title="Show Outside bars?")
-srft                  = input(true, title="Show Three Rising/Failing Bars?")
-srftfb                = input(true, title="Show Three Rising/Failing Bars False Break?")
-stz                   = input(true, title="Show Tension zone?")
-stzfb                 = input(true, title="Show Tension zone false break?")
-sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
-ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
-scb                   = input(true, title="Show Channel Break Out?")
-snr7                  = input(true, title="Show NR7?")
-snr7f                 = input(true, title="Show NR7 False-break?")
-senf                  = input(true, title="Show Engulfing Bar?")
+spb                   = input(true, title="Show Pinbar?")
 skgr                  = input(true, title="Show Kangaroo Tail?")
 sms                   = input(true, title="Show Morning/Evening Star?")
-pctP                  = input(60, minval=1, maxval=99, title="Percentage Input For Pin Bars, What % The Wick Of Candle Has To Be")
-pblb                  = input(2, minval=1, maxval=100, title="Pin Bars Look Back Period To Define The Trend of Highs and Lows")
-eav                   = input(7, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
-insideBarMinSpread    = input(40, minval=1, maxval=99, title="Tension Zone. Percentage Input For First Inside Bar. What % The Wick Of Candle Has To Be Compared To Mother Bar")
+srft                  = input(true, title="Show Rising/Failing Three Bars?")
+s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
+ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
+sstr                  = input(true, title="Show Symmetrical Triangle?")
+scz                   = input(true, title="Show Congestion zone?")
+shl                   = input(true, title="Show HL/LH Break?")
+eav                   = input(8, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
+wav                   = input(13, minval=1, maxval=100, title="EMA Depth For Wick Average/Volatility")
+hlLengthCheck         = input(8, minval=1, maxval=99, title="Highest/Lowest Length Check")
 pctShadow             = input(50, minval=1, maxval=99, title="Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
-hlLengthCheck         = input(10, minval=1, maxval=99, title="Highest/Lowest Length Check")
-
-// Inside bar
-minSpreadInsideBar = insideBarMinSpread/100
-
-//Pin Bar Percentages
-pctCp = pctP * .01
-pctCPO = 1 - pctCp
 
 // spread|range
 spread    = abs(close - open)
@@ -40,26 +27,44 @@ whiteBody = open < close
 blackBody = open > close
 
 // EMA
-spreadAvg            = ema(spread, eav)
-rangeAvg             = ema(range, eav)
-averagTopWickSize    = sma(upShadow, 50)
-averagBottomWickSize = sma(dnShadow, 50)
+spreadAvg             = ema(spread, eav)
+rangeAvg              = ema(range, eav)
+averageTopWickSize    = sma(upShadow, wav)
+averageBottomWickSize = sma(dnShadow, wav)
 
-// lowest check
-f_isLowest(start_index, end_index) =>
+bigBody         = spread > spreadAvg*2
+mediumLongBody  = spread > spreadAvg and spread < spreadAvg*2
+longBody        = spread > spreadAvg
+smallBody       = spread < spreadAvg
+mediumSmallBody = spread < spreadAvg and spread > spreadAvg/2
+tinyBody        = spread < spreadAvg/2
+bodyMiddle      = spread / 2 + bodyLow
+
+// smallest spread check
+f_isSmallest(start_index, end_index) =>
+    bool isSmallestSpread = true
+    for i = start_index to end_index
+        if spread > spread[i] 
+            isSmallestSpread := false
+            break
+
+	_isSmallestSpread = isSmallestSpread
+    [_isSmallestSpread]
+
+f_isLowest(lowest_index, start_index, end_index) =>
     bool isLowestLow = true
     for i = start_index to end_index
-        if low[1] > low[i] 
+        if low[lowest_index] > low[i] 
             isLowestLow := false
             break
 
 	_isLowestLow = isLowestLow
     [_isLowestLow]
-// highest check
-f_isHighest(start_index, end_index) =>
+
+f_isHighest(highest_index, start_index, end_index) =>
     bool isHighestHigh = true
     for i = start_index to end_index
-        if high[1] < high[i]
+        if high[highest_index] < high[i]
             isHighestHigh := false
             break
 
@@ -68,6 +73,8 @@ f_isHighest(start_index, end_index) =>
 
 highestBarCheck() => highestbars(high, hlLengthCheck) == 0 ? 1 : 0
 lowestBarCheck()  => lowestbars(low, hlLengthCheck) == 0 ? 1 : 0
+highestBarCheckWithParam(length) => highestbars(high, length) == 0 ? 1 : 0
+lowestBarCheckWithParam(length)  => lowestbars(low, length) == 0 ? 1 : 0
 
 bigSpreadTaken     = spread > range*0.7
 averageSpreadTaken = spread > range*0.5
@@ -85,17 +92,16 @@ marubozuUpBar = close > open and rangeTakenByBothShadows() and spreadTakenByUpSh
 marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnShadow()
 
 ///PinBars
-bullishPinbar() =>  open > high - (range * pctCPO) and close > high - (range * pctCPO) and low <= lowest(pblb) ? 1 : 0
-bearishPinbar() =>  open < high - (range *  pctCp) and close < high - (range * pctCp) and high >= highest(pblb) ? 1 : 0
+bullishPinbar = spread*2 < spreadAvg and smallSpreadTaken and lowestBarCheck() and dnShadow > averageBottomWickSize*2.5 and upShadow*3 < dnShadow
+bearishPinbar = spread*2 < spreadAvg and smallSpreadTaken and highestBarCheck() and upShadow > averageTopWickSize*2.5 and upShadow > dnShadow*3
 
 //Piercing bar (>=0.5)
-pctPiercing = 50/100
-bearishPiercing()    =>  (open > close[1] or high > high[1]) and ((open - close) >= ((close[1] - open[1])*pctPiercing))
-bullishPiercing()    =>  (open < close[1] or low < low[1])   and (close - open) >= ((open[1] - close[1])*pctPiercing) ? 1 : 0
+bullishPiercing = blackBody[1] and longBody[1] and whiteBody and open <= low[1] and close >= bodyMiddle[1] and close < open[1]
+bearishPiercing = whiteBody[1] and longBody[1] and blackBody and open >= high[1] and close <= bodyMiddle[1] and close > open[1]
 
 // Engulfing bar
-bearishEngulfing()  => close < open[1] and bigSpreadTaken and open >= close[1]
-bullishEngulfing()  => close > open[1] and bigSpreadTaken and open <= close[1]
+bearishEngulfing = blackBody and longBody and whiteBody[1] and mediumLongBody[1] and close <= open[1] and open >= close[1] and ( close < open[1] or open >= close[1] )
+bullishEngulfing = whiteBody and longBody and blackBody[1] and mediumLongBody[1] and close >= open[1] and open <= close[1] and ( close > open[1] or open <= close[1] )
 
 //Doji 
 dojiBodyPercent = 5.0
@@ -103,6 +109,8 @@ shadowEqualsPercent = 100.0
 shadowEquals = upShadow == dnShadow or (abs(upShadow - dnShadow) / dnShadow * 100) < shadowEqualsPercent and (abs(dnShadow - upShadow) / upShadow * 100) < shadowEqualsPercent
 isDojiBody = range > 0 and spread <= range * dojiBodyPercent / 100
 doji = isDojiBody and shadowEquals
+dragonflyDoji = isDojiBody and upShadow <= spread
+gravestoneDoji = isDojiBody and dnShadow <= spread
 
 // Spinning Top 
 spinningTopPercent = 34.0
@@ -120,14 +128,10 @@ hammer       = spread < spreadAvg and spread > 0 and bodyLow > hl2 and dnShadow 
 //=========================================================================|
 //               ASCENDING/DECREASING CHANNEL BREAK OUT                    | 
 //=========================================================================|
-bool decreasingChannel_fourthBar     = false
 bool decreasingChannel_thirdBar      = false
 bool decreasingChannel_secondBar     = false
 bool decreasingChannel_firstBar      = false
 bool decreasingChannel_breakoutBar   = false
-
-if close[4] < open[4] and marubozuDnBar[4]
-    decreasingChannel_fourthBar := true
 
 if low[3] < low[4] and high[3] < high[4]
     decreasingChannel_thirdBar := true
@@ -138,19 +142,16 @@ if low[2] < low[3] and high[2] < high[3]
 if low[1] < low[2] and high[1] < high[2]
     decreasingChannel_firstBar := true
 
-if close >= open[4] and marubozuUpBar
+if close > open and close > high[1] and (low < low[1] or bullishPinbar[1])
     decreasingChannel_breakoutBar := true
 
-decreasingChannelBreakout() => scb and decreasingChannel_fourthBar and decreasingChannel_thirdBar and decreasingChannel_secondBar and decreasingChannel_firstBar and decreasingChannel_breakoutBar
+decreasingChannelBreakout() => shl and decreasingChannel_thirdBar and decreasingChannel_secondBar and decreasingChannel_firstBar and decreasingChannel_breakoutBar
 
-bool ascendingChannel_fourthBar     = false
 bool ascendingChannel_thirdBar      = false
 bool ascendingChannel_secondBar     = false
 bool ascendingChannel_firstBar      = false
 bool ascendingChannel_breakoutBar   = false
 
-if close[4] > open[4] and marubozuUpBar[4]
-    ascendingChannel_fourthBar := true
 
 if low[3] > low[4] and high[3] > high[4]
     ascendingChannel_thirdBar := true
@@ -161,10 +162,10 @@ if low[2] > low[3] and high[2] > high[3]
 if low[1] > low[2] and high[1] > high[2]
     ascendingChannel_firstBar := true
 
-if close <= open[4] and marubozuDnBar
+if close < open and close < low[1] and high > high[1]
     ascendingChannel_breakoutBar := true
 
-ascendingChannelBreakout() => scb and ascendingChannel_fourthBar and ascendingChannel_thirdBar and ascendingChannel_secondBar and ascendingChannel_firstBar and ascendingChannel_breakoutBar
+ascendingChannelBreakout() => shl and ascendingChannel_thirdBar and ascendingChannel_secondBar and ascendingChannel_firstBar and ascendingChannel_breakoutBar
 
 //=========================================================================|
 //                    BULLISH/BREARISH STALLED PATTERN                     | 
@@ -179,40 +180,87 @@ ascendingChannelBreakout() => scb and ascendingChannel_fourthBar and ascendingCh
 bool bullishStalled_thirdBar      = false
 bool bullishStalled_secondBar     = false
 bool bullishStalled_firstBar      = false
-bool bullishStalled_reverserBar   = false
 
-if close[3] > open[3] and marubozuUpBar[3]
+if close[2] > open[2] and spread[2] > spreadAvg and range[2] > rangeAvg
     bullishStalled_thirdBar := true
 
-if close[2] > open[2] and close[2] > close[3] and (close[2] - open[2]) > (close[1] - open[1])
+if close[1] > open[1] and close[1] > high[2] and spread[1] < spread[2] and range[1] < range[2]
     bullishStalled_secondBar := true
 
-if close[1] > open[1] and close[1] > close[2] and open[1] == close[2] and (doji[1] or spinningTopWhite[1] or averageSpreadTaken[1] or shootingStar[1])
+if  close > open and close > high[1] and spread < spread[1] and range < range[1]
     bullishStalled_firstBar := true
 
-if  close < open[1] and close <= (close[2] + open[2])/2
-    bullishStalled_reverserBar := true
-
-bullishStalled() => ssp and bullishStalled_firstBar and bullishStalled_secondBar and bullishStalled_thirdBar and bullishStalled_reverserBar
+bullishStalled() => ssp and bullishStalled_firstBar and bullishStalled_secondBar and bullishStalled_thirdBar
 
 bool bearishStalled_thirdBar      = false
 bool bearishStalled_secondBar     = false
 bool bearishStalled_firstBar      = false
-bool bearishStalled_reverserBar   = false
 
-if close[3] < open[3] and marubozuDnBar[3]
+if close[2] < open[2] and spread[2] > spreadAvg and range[2] > rangeAvg
     bearishStalled_thirdBar := true
 
-if close[2] < open[2] and close[2] < close[3] and (open[2] - close[2]) > (open[1] - close[1])
+if close[1] < open[1] and close[1] < low[2] and spread[1] < spread[2] and range[1] < range[2]
     bearishStalled_secondBar := true
 
-if close[1] < open[1] and close[1] < close[2] and open[1] == close[2] and (doji[1] or spinningTopBlack[1] or averageSpreadTaken[1] or hammer[1])
+if close < open and close < low[1] and spread < spread[1] and range < range[1]
     bearishStalled_firstBar := true
 
-if  close > open[1] and close >= (close[2] + open[2])/2
-    bearishStalled_reverserBar := true
+bearishStalled() => ssp and bearishStalled_thirdBar and bearishStalled_secondBar and bearishStalled_firstBar 
 
-bearishStalled() => ssp and bearishStalled_thirdBar and bearishStalled_secondBar and bearishStalled_firstBar and bearishStalled_reverserBar
+//=========================================================================|
+//                     SYMMETRICAL TRIANGLE                                | 
+//=========================================================================|
+bool symTriangle_firstBar       = false
+bool symTriangle_secondBar      = false
+bool symTriangle_thirdBar       = false
+bool symTriangle_fourthBar      = false
+
+if range[4] > rangeAvg
+    symTriangle_firstBar := true
+
+if high[3] < high[4] and low[3] > low[4]
+    symTriangle_secondBar := true
+
+if high[2] < high[3] and low[2] > low[3]
+    symTriangle_thirdBar := true
+
+if high[1] < high[2] and low[1] > low[2]
+    symTriangle_fourthBar := true
+
+symmetricalTriangle() => sstr and symTriangle_firstBar and symTriangle_secondBar and symTriangle_thirdBar and symTriangle_fourthBar
+
+//=========================================================================|
+//                     SYMMETRICAL TRIANGLE BREAKOUT                       | 
+//=========================================================================|
+bool symBreakout_firstBar      = false
+bool symBreakout_secondBar     = false
+bool symBreakout_thirdBar      = false
+bool symBreakout_fourthBar     = false
+bool symBreakout_breakoutBar   = false
+
+if spread[4] > spreadAvg and range[4] > rangeAvg
+    symBreakout_firstBar := true
+
+if high[3] < high[4] and low[3] > low[4] and spread[3] < spreadAvg
+    symBreakout_secondBar := true
+
+if high[2] < high[4] and low[2] > low[4] and spread[2] < spreadAvg
+    symBreakout_thirdBar := true
+
+if high[1] < high[2] and low[1] > low[2] and spread[1] < spreadAvg
+    symBreakout_fourthBar := true
+
+f_triangleBreakout() =>
+	_isUp               = close > open 
+	_breakDirection     = _isUp ? close > close[4] and close > open[4] : close < close[4] and close < open[4]
+    [_breakDirection]
+
+[breakDirection]  = f_triangleBreakout()
+
+if averageSpreadTaken and breakDirection
+    symBreakout_breakoutBar := true 
+
+symmetricalTriangleBreakout() => sstr and symBreakout_firstBar and symBreakout_secondBar and symBreakout_thirdBar and symBreakout_fourthBar and symBreakout_breakoutBar
 
 //=========================================================================|
 //                     RASING/FAILLING THREE                               | 
@@ -221,23 +269,23 @@ bearishStalled() => ssp and bearishStalled_thirdBar and bearishStalled_secondBar
 // The First and Fifth Candle are white and are longer than the other Three Candles of the Pattern
 // The Second, Third and Fourth Candle are fully contained within the Real Body of the First Candle
 // The Close of the Fifth Candle is above the Close of the First Candle
-// Rising three | Mother maru green - green/red - green/red - green/red - Maru green
+// Rising three 
 bool rising3_firstBar  = false
 bool rising3_secondBar = false
 bool rising3_thirdBar  = false
 bool rising3_fourthBar = false
 bool rising3_fifthBar  = false
 
-if close[4] > open[4]
-    rising3_firstBar := averageSpreadTaken[4] 
+if close[4] > open[4] and averageSpreadTaken[4] 
+    rising3_firstBar := true
 
-if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4] and high[3] < high[4] and low[3] > low[4]
-    rising3_secondBar := (high[3] - low[3]) >= ((close[4] - open[4])*minSpreadInsideBar)
+if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4] 
+    rising3_secondBar := true
 
-if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4] and high[2] < high[4] and low[2] > low[4]
+if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4]
     rising3_thirdBar := true
 
-if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4] and high[1] < high[4] and low[1] > low[4]
+if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4]
     rising3_fourthBar := true
 
 if close > close[4] 
@@ -245,318 +293,124 @@ if close > close[4]
 
 risingThree() => srft and rising3_firstBar and rising3_secondBar and rising3_thirdBar and rising3_fourthBar and rising3_fifthBar 
 
-// Failling three | Mother maru red - green/red - green/red - green/red - Maru red
-bool failling3_firstBar    = false
-bool failling3_secondBar   = false
-bool failling3_thirdBar    = false
-bool failling3_fourthBar   = false
-bool failling3_fifthBar    = false
+// Rising three fail
+bool rising3f_firstBar  = false
+bool rising3f_secondBar = false
+bool rising3f_thirdBar  = false
+bool rising3f_fourthBar = false
+bool rising3f_fifthBar  = false
 
-if close[4] < open[4]
-    failling3_firstBar := averageSpreadTaken[4]
+if close[4] > open[4] and averageSpreadTaken[4] 
+    rising3f_firstBar := true
 
-if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4] and high[3] < high[4] and low[3] > low[4]
-    failling3_secondBar := (high[3] - low[3]) >= ((open[4] - close[4])*minSpreadInsideBar)
+if close[3] <= close[4] and close[3] >= open[4] and open[3] <= close[4] 
+    rising3f_secondBar := true
 
-if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] and high[2] < high[4] and low[2] > low[4]
-    failling3_thirdBar := true
+if close[2]>=open[4] and open[2] <= close[4] and close[2]<=close[4]
+    rising3f_thirdBar := true
 
-if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] and high[1] < high[4] and low[1] > low[4]
-    failling3_fourthBar := true
+if close[1]>=open[4] and open[1] <= close[4] and close[1]<=close[4]
+    rising3f_fourthBar := true
+
+if close > close[4] 
+    rising3f_fifthBar := true
+
+risingThreeFail() => srft and rising3f_firstBar and rising3f_secondBar and rising3f_thirdBar and rising3f_fourthBar and rising3f_fifthBar 
+
+
+// Falling three 
+bool falling3_firstBar    = false
+bool falling3_secondBar   = false
+bool falling3_thirdBar    = false
+bool falling3_fourthBar   = false
+bool falling3_fifthBar    = false
+
+if close[4] < open[4] and averageSpreadTaken[4]
+    falling3_firstBar :=  true
+
+if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4]
+    falling3_secondBar := true
+
+if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] 
+    falling3_thirdBar := true
+
+if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] 
+    falling3_fourthBar := true
 
 if close < close[4]
-    failling3_fifthBar :=  true
+    falling3_fifthBar :=  true
 
-faillingThree() => srft and failling3_firstBar and failling3_secondBar and failling3_thirdBar and failling3_fourthBar and failling3_fifthBar
+fallingThree() => srft and falling3_firstBar and falling3_secondBar and falling3_thirdBar and falling3_fourthBar and falling3_fifthBar
 
-//=========================================================================|
-//                     RASING/FAILLING THREE FALSE BREAK                   | 
-//=========================================================================|
-//Rising three false break| Mother maru green - green/red - green/red - green/red - Maru green - Piercing down
-bool rising3fb_firstBar    = false
-bool rising3fb_secondBar   = false
-bool rising3fb_thirdBar    = false
-bool rising3fb_fourthBar   = false
-bool rising3fb_fifthBar    = false
-bool rising3fb_reverseBar  = false
+// Falling three fail
+bool falling3f_firstBar    = false
+bool falling3f_secondBar   = false
+bool falling3f_thirdBar    = false
+bool falling3f_fourthBar   = false
+bool falling3f_fifthBar    = false
 
-if close[5] > open[5]
-    rising3fb_firstBar := averageSpreadTaken[5] 
+if close[4] < open[4] and averageSpreadTaken[4]
+    falling3f_firstBar :=  true
 
-if close[4] <= close[5] and close[4] >= open[5] and open[4] <= close[5] and high[4] < high[5] and low[4] > low[5]
-    rising3fb_secondBar := (high[4] - low[4]) >= ((close[5] - open[5])*minSpreadInsideBar)
-    
-if close[3]>=open[5] and open[3] <= close[5] and close[3]<=close[5] and high[3] < high[5] and low[3] > low[5]
-    rising3fb_thirdBar := true
+if  close[3] >= close[4] and close[3] <= open[4] and open[3] >= close[4]
+    falling3f_secondBar := true
 
-if close[2]>=open[5] and open[2] <= close[5] and close[2]<=close[5] and high[2] < high[5] and low[2] > low[5]
-    rising3fb_fourthBar := true
+if close[2] >= close[4] and close[2] <= open[4] and open[2] >= close[4] 
+    falling3f_thirdBar := true
 
-if close[1] >= close[5] 
-    rising3fb_fifthBar := true
+if close[1] >= close[4] and close[1] <= open[4] and open[1] >= close[4] 
+    falling3f_fourthBar := true
 
-if bearishPiercing() or bearishEngulfing()
-    rising3fb_reverseBar := true
+if close > open[4]
+    falling3f_fifthBar :=  true
 
-risingThreeFalseBreak() => srftfb and rising3fb_firstBar and rising3fb_secondBar and rising3fb_thirdBar and rising3fb_fourthBar and rising3fb_fifthBar and rising3fb_reverseBar
-
-// Failling three false break| Mother maru red - green/red - green/red - green/red - Maru red - Piercing up
-bool failling3fb_firstBar     = false
-bool failling3fb_secondBar    = false
-bool failling3fb_thirdBar     = false
-bool failling3fb_fourthBar    = false
-bool failling3fb_fifthBar     = false
-bool failling3fb_reverseBar   = false
-
-if close[5] < open[5]
-    failling3fb_firstBar := averageSpreadTaken[5]
-
-if  close[4] >= close[5] and close[4] <= open[5] and open[4] >= close[5] and high[4] < high[5] and low[4] > low[5]
-    failling3fb_secondBar := (high[4] - low[4]) >= ((open[5] - close[5])*minSpreadInsideBar)
-
-if close[3] >= close[5] and close[3] <= open[5] and open[3] >= close[5] and high[3] < high[5] and low[3] > low[5]
-    failling3fb_thirdBar := true
-
-if close[2] >= close[5] and close[2] <= open[5] and open[2] >= close[5] and high[2] < high[5] and low[2] > low[5]
-    failling3fb_fourthBar := true
-
-if close[1] <= close[5]
-    failling3fb_fifthBar :=  true
-
-if  bullishPiercing() or bullishEngulfing()
-    failling3fb_reverseBar := true
-
-faillingThreeFalseBreak() => srftfb and failling3fb_firstBar and failling3fb_secondBar and failling3fb_thirdBar and failling3fb_fourthBar and failling3fb_fifthBar and failling3fb_reverseBar
+fallingThreeFail() => srft and falling3f_firstBar and falling3f_secondBar and falling3f_thirdBar and falling3f_fourthBar and falling3f_fifthBar
 
 //=========================================================================|
-//                     TENSION ZONE BREAK                                  | 
+//                     THREE WHITE SOLDIERS                                | 
 //=========================================================================|
-// green - red - green 
-thirdGRG()   => close[3] > open[3] ? 1 : 0
-secondGRG()  => close[2] < open[2] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
-firstGRG()   => close[1] > open[1] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
+bool threeSoldiers_firstBar    = false
+bool threeSoldiers_secondBar   = false
+bool threeSoldiers_thirdBar    = false
 
-//green - red - red
-thirdGRR()   => close[3] > open[3] ? 1 : 0
-secondGRR()  => close[2] < open[2] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
-firstGRR()   => close[1] < open[1] and close[1] >= close[2] ? 1 : 0
+if close[2] > open[2] and averageSpreadTaken[2]
+    threeSoldiers_firstBar := true
 
-//green - green - red
-thirdGGR()   => close[3] > open[3] ? 1 : 0
-secondGGR()  => close[2] > open[2] and close[2] <= close[3] and open[2] >= open[3] ? 1 : 0
-firstGGR()   => close[1] < open[1] and close[1] >= open[1] and open[1] <= close[2]? 1 : 0
+if close[1] > open[1] and close[1] > high[2] and spread[1] > spread[2]
+    threeSoldiers_secondBar := true
 
-// red - green - red 
-thirdRGR()   => close[3] < open[3] ? 1 : 0
-secondRGR()  => close[2] > open[2] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
-firstRGR()   => close[1] < open[1] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
-// and (close < close[1] or close > open[1])
+if close > open and close > high[1] and spread > spread[1]
+    threeSoldiers_thirdBar := true
 
-// red - green - green
-thirdRGG()   => close[3] < open[3] ? 1 : 0
-secondRGG()  => close[2] > open[2] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
-firstRGG()   => close[1] > open[1] and close[1] <= close[2] ? 1 : 0
-//and (close > close[1] or close < open[1]) 
-
-// red - red - green
-thirdRRG()   => close[3] < open[3] ? 1 : 0
-secondRRG()  => close[2] < open[2] and close[2] >= close[3] and open[2] <= open[3] ? 1 : 0
-firstRRG()   => close[1] > open[1] and close[1] <= open[2] ? 1 : 0
-
-grg  = stz and thirdGRG() and secondGRG() and firstGRG() and (open[2] - close[2]) >= ((close[3] - open[3])*minSpreadInsideBar)
-grr  = stz and thirdGRR() and secondGRR() and firstGRR() and (open[2] - close[2]) >= ((close[3] - open[3])*minSpreadInsideBar)
-ggr  = stz and thirdGGR() and secondGGR() and firstGGR() and (open[2] - close[2]) >= ((close[3] - open[3])*minSpreadInsideBar)
-rgr  = stz and thirdRGR() and secondRGR() and firstRGR() and (close[2] - open[2]) >= ((open[3] - close[3])*minSpreadInsideBar)
-rgg  = stz and thirdRGG() and secondRGG() and firstRGG() and (close[2] - open[2]) >= ((open[3] - close[3])*minSpreadInsideBar)
-rrg  = stz and thirdRRG() and secondRRG() and firstRRG() and (close[2] - open[2]) >= ((open[3] - close[3])*minSpreadInsideBar)
+threeWhiterSoldier() => s3ws and threeSoldiers_firstBar and threeSoldiers_secondBar and threeSoldiers_thirdBar
 //=========================================================================|
-//                     TENSION ZONE FALSE BREAK                            | 
+//                     THREE BLACK CROWS                                   | 
 //=========================================================================|
-minimumGreenBarSpread() => (open[3] - close[3]) >= ((close[4] - open[4])*minSpreadInsideBar)
-minimumRedBarSpread() => (close[3] - open[3]) >= ((open[4] - close[4])*minSpreadInsideBar)
-// False break up | green - red - green - green(false break) - reverse
-up_fourthGRGGR()    => close[4] > open[4] and open[3] <= close[4] and close[3] >= open[4] ? 1 : 0
-up_thirdGRGGR()     => close[3] < open[3] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
-up_secondGRGGR()    => close[2] > open[2] and close[1] > close[2] ? 1 : 0
-up_firstGRGGR()     => close[1] > open[1] ? 1 : 0
-falseBreakUp1  = stzfb and up_fourthGRGGR() and up_thirdGRGGR() and up_secondGRGGR() and up_firstGRGGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumGreenBarSpread()
+bool threeCrows_firstBar    = false
+bool threeCrows_secondBar   = false
+bool threeCrows_thirdBar    = false
 
-// False break up | red - green - red - green(false break) - reverse
-up_fourthRGRGR()    => close[4] < open[4] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
-up_thirdRGRGR()     => close[3] > open[3] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
-up_secondRGRGR()    => close[2] < open[2] and close[1] > close[2] ? 1 : 0
-up_firstRGRGR()     => close[1] > open[1] ? 1 : 0
-falseBreakUp2  = stzfb and up_fourthRGRGR() and up_thirdRGRGR() and up_secondRGRGR() and up_firstRGRGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumRedBarSpread()
+if close[2] < open[2] and averageSpreadTaken[2]
+    threeCrows_firstBar := true
 
-// False break up | red - green - green - green(false break) - reverse
-up_fourthRGGGR()    => close[4] < open[4] ? 1 : 0
-up_thirdRGGGR()     => close[3] > open[3] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
-up_secondRGGGR()    => close[2] > open[2] and close[2] <= close[3] and open[2] >= open[3] ? 1 : 0
-up_firstRGGGR()     => close[1] > open[1] and close[1] > close[2] ? 1 : 0
-falseBreakUp3  = stzfb and up_fourthRGGGR() and up_thirdRGGGR() and up_secondRGGGR() and up_firstRGGGR() and (bearishPiercing() or bearishPinbar() or shootingStar or bearishEngulfing()) and minimumRedBarSpread()
+if close[1] < open[1] and close[1] < low[2] and spread[1] > spread[2]
+    threeCrows_secondBar := true
 
-// False break down | red - green - red - red(false break) - reverse
-down_fourthRGRRR()    => close[4] < open[4] ? 1 : 0
-down_thirdRGRRR()     => close[3] > open[3] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
-down_secondRGRRR()    => close[2] < open[2] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
-down_firstRGRRR()     => close[1] < open[1] and close[1] < close[2] ? 1 : 0
-falseBreakDown1  = stzfb and down_fourthRGRRR() and down_thirdRGRRR() and down_secondRGRRR() and down_firstRGRRR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumRedBarSpread()
+if close < open and  close < low[1] and spread > spread[1]
+    threeCrows_thirdBar := true
 
-// False break down | green - red - green - red(false break) - reverse
-down_fourthGRGRR()    => close[4] > open[4] and open[3] <= close[4] and close[3] >= open[4] ? 1 : 0
-down_thirdGRGRR()     => close[3] < open[3] and open[2] >= close[3] and close[2] <= open[3] ? 1 : 0
-down_secondGRGRR()    => close[2] > open[2] and close[1] < close[2] ? 1 : 0
-down_firstGRGRR()     => close[1] > open[1] ? 1 : 0
-falseBreakDown2  = stzfb and down_fourthGRGRR() and down_thirdGRGRR() and down_secondGRGRR() and down_firstGRGRR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumGreenBarSpread()
-
-// False break down | red - green - red - green(false break) - reverse
-down_fourthRGRGR()    => close[4] < open[4] and open[3] >= close[4] and close[3] <= open[4] ? 1 : 0
-down_thirdRGRGR()     => close[3] > open[3] and open[2] <= close[3] and close[2] >= open[3] ? 1 : 0
-down_secondRGRGR()    => close[2] < open[2] and close[1] < open[2] ? 1 : 0
-down_firstRGRGR()     => close[1] > open[1] ? 1 : 0
-falseBreakDown3  = stzfb and down_fourthRGRGR() and down_thirdRGRGR() and down_secondRGRGR() and down_firstRGRGR() and (bullishPiercing() or bullishPinbar() or hammer or bullishEngulfing()) and minimumRedBarSpread()
+threeBlackCrows() => s3ws and threeCrows_firstBar and threeCrows_secondBar and threeCrows_thirdBar
 
 //=========================================================================|
-//                     FAKEY                                               | 
+//                     CONGESTION ZONE BREAK                               | 
 //=========================================================================|
-// fakey shooting star
-// green - red - shooting star
-fakeyUp1_secondGreenBar()       => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
-fakeyUp1_firstRedBar()          => close[1] <= open[1] ? 1 : 0 
-fakeyUp1_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
-// and close <= open[1] and close >= close[1]
-fakey_up1 = sfk and fakeyUp1_secondGreenBar() and fakeyUp1_firstRedBar() and fakeyUp1_shootingStarBar() 
+congestionZone1_4()   => range[4] > rangeAvg or averageSpreadTaken[4] ? 1 : 0
+congestionZone1_3()   => close[3] <= high[4] and close[3] >= low[4] ? 1 : 0
+congestionZone1_2()   => close[2] <= high[3] and close[2] >= low[3] ? 1 : 0
+congestionZone1_1()   => close[1] <= high[2] and close[1] >= low[2] ? 1 : 0
+congestionZone1_0()   => close < low[1] or close > high[1]          ? 1 : 0
 
-// green - green - shooting star
-fakeyUp2_secondGreenBar()       => close[2] > open[2] and close[1] <= open[2] ? 1 : 0
-fakeyU2_firstGreenBar()         => close[1] >= open[1] and close <= close[2] ? 1 : 0 
-fakeyUp2_shootingStarBar()      => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
-fakey_up2 = sfk and fakeyUp2_secondGreenBar() and fakeyU2_firstGreenBar() and fakeyUp2_shootingStarBar()
-
-// red - green - shooting star
-fakeyUp3_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
-fakeyUp3_firstGreenBar()   => close[1] >= open[1] and close <= close[1] ? 1 : 0
-fakeyUp3_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
-//and close <= close[1] and close >= open[1]
-fakey_up3 = sfk and fakeyUp3_secondRedBar() and fakeyUp3_firstGreenBar() and fakeyUp3_shootingStarBar()
-
-// red - red - shooting star
-fakeyUp4_secondRedBar()    => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
-fakeyUp4_firstRedBar()     => close[1] <= open[1] and close >= open[2] ? 1 : 0
-fakeyUp4_shootingStarBar() => high > high[1] and high > high[2] and bearishPinbar() and upShadow >= spread*3 ? 1 : 0
-//and close <= close[1] and close >= open[1]
-fakey_up4 = sfk and fakeyUp4_secondRedBar() and fakeyUp4_firstRedBar() and fakeyUp4_shootingStarBar()
-
-// fakey hammer
-// red - green - hammer
-fakeyDown1_secondRedBar()  => close[2] < open[2] and open[1] >= close[2] and close[1] <= open[2] ? 1 : 0
-fakeyDown1_firstGreenBar() => close[1] >= open[1] and close >= open[1] ? 1 : 0
-fakeyDown1_hammerBar()     => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
-fakey_down1 = sfk and fakeyDown1_secondRedBar() and fakeyDown1_firstGreenBar() and fakeyDown1_hammerBar() 
-
-// green - red - hammer
-fakeyDown2_secondGreenBar()  => close[2] > open[2] and open[1] <= close[2] and close[1] >= open[2] ? 1 : 0
-fakeyDown2_firstRedBar()     => close[1] <= open[1] and close > close[1] ? 1 : 0
-fakeyDown2_hammerBar()       => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
-fakey_down2 = sfk and fakeyDown2_secondGreenBar() and fakeyDown2_firstRedBar() and fakeyDown2_hammerBar()  
-
-// red - red - hammer
-fakeyDown3_secondRedBar() => close[2] < open[2] and open[1] >= close[2] and close[1] >= close[2] ? 1 : 0
-fakeyDown3_firstRedBar()  => close[1] <= open[1] and close <= open[2] ? 1 : 0
-fakeyDown3_hammerBar()      => low < low[1] and low < low[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
-fakey_down3 = sfk and fakeyDown3_secondRedBar() and fakeyDown3_firstRedBar() and fakeyDown3_hammerBar()
-
-// green - green - hammer
-fakeyDown4_secondGreenBar()  => close[2] > open[2] and close[1] <= close[2] ? 1 : 0
-fakeyDown4_firstGreenBar()   => close[1] >= open[1] ? 1 : 0
-fakeyDown4_hammerBar()       => low < low[1] and low < low[2] and close <= close[2] and bullishPinbar() and dnShadow >= spread*3 ? 1 : 0
-fakey_down4 = sfk and fakeyDown4_secondGreenBar() and fakeyDown4_firstGreenBar() and fakeyDown4_hammerBar() 
-
-//=========================================================================|
-//                     NR7 PATERN                                          | 
-//=========================================================================|
-//This bar pattern requires seven bars.
-bool nr7_sixthBar     = false
-bool nr7_fifthBar     = false
-bool nr7_fourthBar    = false
-bool nr7_thirdBar     = false
-bool nr7_secondBar    = false
-bool nr7_firstBar     = false
-
-f_NR7(insideBar_index, motherBar_index) =>
-	_isUp               = close[motherBar_index] > open[motherBar_index]
-	_insideBar          = _isUp ? close[insideBar_index] <= close[motherBar_index] and close[insideBar_index] >= open[motherBar_index] : close[insideBar_index] >= close[motherBar_index] and close[insideBar_index] <= open[motherBar_index]
-    [_insideBar]
-
-[nr7_fifthInsideBar]  = f_NR7(5, 6)
-[nr7_fourthInsideBar] = f_NR7(4, 6)
-[nr7_thirdInsideBar]  = f_NR7(3, 6)
-[nr7_secondInsideBar] = f_NR7(2, 6)
-[nr7_firstInsideBar]  = f_NR7(1, 6)
-
-if averageSpreadTaken[6]
-    nr7_sixthBar := true
-
-if  nr7_fifthInsideBar
-    nr7_fifthBar := true
-
-if nr7_fourthInsideBar
-    nr7_fourthBar := true
-
-if nr7_thirdInsideBar
-    nr7_thirdBar := true
-
-if nr7_secondInsideBar
-    nr7_secondBar := true
-
-if nr7_firstInsideBar
-    nr7_firstBar := true
-
-nr7() => snr7 and nr7_sixthBar and nr7_fifthBar and nr7_fourthBar and nr7_thirdBar and nr7_secondBar and nr7_firstBar
-
-//=========================================================================|
-//                     NR7 FALSE BREAK                                     | 
-//=========================================================================|
-bool nr7f_seventhBar        = false
-bool nr7f_sixthBar          = false
-bool nr7f_fifthBar          = false
-bool nr7f_fourthBar         = false
-bool nr7f_thirdBar          = false
-bool nr7f_secondBar         = false
-bool nr7f_firstBar          = false
-bool nr7f_reverseBar        = false
-
-[nr7f_sixthInsideBar]   = f_NR7(6, 7)
-[nr7f_fifthInsideBar]   = f_NR7(5, 7)
-[nr7f_fourthInsideBar]  = f_NR7(4, 7)
-[nr7f_thirdInsideBar]   = f_NR7(3, 7)
-[nr7f_secondInsideBar]  = f_NR7(2, 7)
-
-if averageSpreadTaken[7]
-    nr7f_seventhBar := true
-
-if nr7f_sixthInsideBar
-    nr7f_sixthBar := true
-
-if nr7f_fifthInsideBar
-    nr7f_fifthBar := true
-
-if nr7f_fourthInsideBar
-    nr7f_fourthBar := true
-
-if nr7f_thirdInsideBar
-    nr7f_thirdBar := true
-
-if nr7f_secondInsideBar
-    nr7f_secondBar := true
-
-if close[1] > open[1] and (bearishPiercing() or bearishEngulfing())
-    nr7f_reverseBar := true
-
-if close[1] < open[1] and (bullishPiercing() or bullishEngulfing())
-    nr7f_reverseBar := true
-
-nr7f() => snr7 and nr7f_seventhBar and nr7f_sixthBar and nr7f_fifthBar and nr7f_fourthBar and nr7f_thirdBar and nr7f_secondBar and nr7f_reverseBar
+congestionZone1  = scz and congestionZone1_4() and congestionZone1_3() and congestionZone1_2() and congestionZone1_1() and congestionZone1_0() 
 
 //=========================================================================|
 //                     KANGAROO TAIL                                       | 
@@ -586,7 +440,7 @@ if close <= low + (high - low)/3 and open <= low + (high - low)/3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     topKgr_closeInsidePreviousBar := true
 
-if upShadow >= 2 * averagTopWickSize 
+if upShadow >= 2 * averageTopWickSize 
     topKgr_wickVolatility := true
 
 if highestBarCheck()
@@ -601,8 +455,6 @@ bool bottomKgr_closeNearTop            = false
 bool bottomKgr_closeInsidePreviousBar  = false
 bool bottomKgr_biggerRangePreviousBar  = false
 
-averagebottomwicksize = sma(dnShadow, 50)
-
 if range - range[1] >= 0
     bottomKgr_biggerRangePreviousBar := true
 
@@ -615,62 +467,18 @@ if close >= high - (high - low) / 3 and open >= high - (high - low) / 3
 if spread > 0 and open <= high[1] and open >= low[1] and close < high[1] and close > low[1]
     bottomKgr_closeInsidePreviousBar := true
 
-if dnShadow >= 2 * averagBottomWickSize 
+if dnShadow >= 2 * averageBottomWickSize 
     bottomKgr_wickVolatility := true
 
 if lowestBarCheck()
     bottomKgr_noSpaceOnTheLeft := true
 
 bottomKangaroo() => skgr and bottomKgr_biggerRangePreviousBar and bottomKgr_minimumWickLength and bottomKgr_closeNearTop and bottomKgr_closeInsidePreviousBar and bottomKgr_wickVolatility and bottomKgr_noSpaceOnTheLeft
-//=========================================================================|
-//                     ENGULFING                                           | 
-//=========================================================================|
-// spread has more volatility than last 10 bars and not x2 average volatility
-// close near the high/close
-// engulfing bar has higher high and higher low compared to previous bar
-// space on the left(7 bars)
-bool whiteEngulfing_volatility       = false
-bool whiteEngulfing_isEngulfing      = false
-bool whiteEngulfing_spaceOnTheLeft   = false
-bool whiteEngulfing_closeNearHigh    = false
-
-bool blackEngulfing_volatility       = false
-bool blackEngulfing_isEngulfing      = false
-bool blackEngulfing_spaceOnTheLeft   = false
-bool blackEngulfing_closeNearLow     = false
-       
-// white
-if close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
-    whiteEngulfing_isEngulfing := true
-
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
-    whiteEngulfing_volatility := true
-
-if spreadTakenByUpShadow()
-    whiteEngulfing_closeNearHigh := true
-
-[engulfing_isLowestLow]  = f_isLowest(2, hlLengthCheck)
-
-whiteEngulfing() => senf and whiteEngulfing_isEngulfing and whiteEngulfing_volatility and whiteEngulfing_closeNearHigh and (engulfing_isLowestLow or lowestBarCheck())
-
-// black
-if close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
-    blackEngulfing_isEngulfing := true
-
-if spread > spreadAvg and spread < spreadAvg*2 and range >= range[1]
-    blackEngulfing_volatility := true
-
-if spreadTakenByDnShadow()
-    blackEngulfing_closeNearLow := true
-
-[engulfing_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
-
-
-blackEngulfing() => senf and blackEngulfing_isEngulfing and blackEngulfing_volatility and blackEngulfing_closeNearLow and (engulfing_isHighestHigh or highestBarCheck())
 
 //=========================================================================|
 //                     MORNING/EVENING STAR                                | 
 //=========================================================================|
+//morning
 bool morning_firstBar               = false
 bool morning_secondBar              = false
 bool morning_thirdBar               = false
@@ -678,7 +486,7 @@ bool morning_thirdBar               = false
 if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and spread > spreadAvg
     morning_firstBar := true
 
-[morning_isLowestLow]  = f_isLowest(2, hlLengthCheck)
+[morning_isLowestLow]  = f_isLowest(1, 2, hlLengthCheck)
 if doji[1] or (hammer[1] and morning_isLowestLow) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and morning_isLowestLow)
     morning_secondBar := true
 
@@ -687,6 +495,23 @@ if close > open and close > (open[2] + close[2])/2 and close > high[1]
 
 morningStar() => sms and morning_firstBar and morning_secondBar and morning_thirdBar
 
+bool morning2_firstBar               = false
+bool morning2_secondBar              = false
+bool morning2_thirdBar               = false
+
+[morning2_isLowestLow]  = f_isLowest(2, 3, hlLengthCheck)
+if close[2] < open[2] and averageSpreadTaken[2] and spread[2] > spreadAvg and morning2_isLowestLow
+    morning2_firstBar := true
+
+if doji[1] or hammer[1] or spinningTopWhite[1] or spinningTopBlack[1] or dragonflyDoji[1]
+    morning2_secondBar := true
+
+if close > open and close > open[2] and marubozuUpBar
+    morning2_thirdBar := true
+
+morningStar2() => sms and morning2_firstBar and morning2_secondBar and morning2_thirdBar
+
+//evening
 bool evening_firstBar               = false
 bool evening_secondBar              = false
 bool evening_thirdBar               = false
@@ -694,7 +519,7 @@ bool evening_thirdBar               = false
 if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and spread > spreadAvg
     evening_firstBar := true
 
-[evening_isHighestHigh]  = f_isHighest(2, hlLengthCheck)
+[evening_isHighestHigh]  = f_isHighest(1, 2, hlLengthCheck)
 if doji[1] or (shootingStar[1] and evening_isHighestHigh) or (spread[1] < spreadAvg/5 and range[1] < rangeAvg and evening_isHighestHigh)
     evening_secondBar := true
 
@@ -702,54 +527,75 @@ if close < open and close < (open[2] + close[2])/2 and close < low[1]
     evening_thirdBar := true
 
 eveningStar() => sms and evening_firstBar and evening_secondBar and evening_thirdBar
+
+bool evening2_firstBar               = false
+bool evening2_secondBar              = false
+bool evening2_thirdBar               = false
+
+[evening2_isHighestHigh]  = f_isHighest(2, 3, hlLengthCheck)
+if close[2] < open[2] and averageSpreadTaken[2]  and spread[2] > spreadAvg and evening2_isHighestHigh
+    evening2_firstBar := true
+
+if doji[1] or shootingStar[1] or spinningTopWhite[1] or spinningTopBlack[1] or gravestoneDoji[1]
+    evening2_secondBar := true
+
+if close > open and close < close[2] and marubozuDnBar
+    evening2_thirdBar := true
+
+eveningStar2() => sms and evening2_firstBar and evening2_secondBar and evening2_thirdBar
+
 //------------------------------------------------------------------------------
-// Tension zone
-barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
+// Congestion zone
+barcolor(congestionZone1 ? color.yellow : na )
 
-// Tension zone false break
-barcolor(falseBreakUp1 or falseBreakUp2 or falseBreakUp3 ? color.orange : na)
-barcolor(falseBreakDown1 or falseBreakDown2 or falseBreakDown3? color.orange : na)
+// Congestion break out failure
+bool breakout_failure = false
+if close[1] < open[1]
+    breakout_failure := close > open[1]
 
-//fakey
-barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4 ? color.silver : na)
-barcolor(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4 ? color.silver : na)
-alertcondition(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4, title="Fakey up")
-alertcondition(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4, title="Fakey down")
+if close[1] > open[1]
+    breakout_failure := close < open[1]
+
+barcolor(congestionZone1[1] and breakout_failure  ? color.orange : na )
 
 // rising/failling three
-barcolor(risingThree() or faillingThree() ? color.yellow : na)
-
-// rising/failling three false break
-barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : na)
+barcolor(risingThree() or fallingThree() ? color.yellow : na)
+barcolor(risingThreeFail() or fallingThreeFail() ? color.yellow : na)
 
 //Stalled pattern 
-barcolor(bullishStalled() or bearishStalled() ? color.yellow : na)
+barcolor(bullishStalled() or bearishStalled() ? color.blue : na)
 
 // Channel break
 barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yellow : na)
-
-// NR7
-barcolor(nr7() ? color.yellow : na)
-barcolor(nr7f() ? color.orange : na)
-
-// Engulfing
-barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
-alertcondition(whiteEngulfing() or blackEngulfing(), title="Engulfing")
+plotshape(decreasingChannelBreakout(), text="LHB", title="Lower High Break", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white)
+plotshape(ascendingChannelBreakout(), text="HLB", title="Higher Low Break", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black)
 
 // Kangaroo
 barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
+plotshape(bottomKangaroo(), text="KGR", title="Bullish Kangaroo", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white)
+plotshape(topKangaroo() , text="KGR", title="Bearish Kangaroo", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black)
+
 alertcondition(topKangaroo() or bottomKangaroo(), title="Kangaroo Tail")
 
 // Morning/Evening Star
-barcolor(morningStar() or eveningStar() ? color.purple : na)
+barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() ? color.purple : na)
+plotshape(close > open and (morningStar() or morningStar2()), text="MS", title="Morning Star", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white)
+plotshape(close < open and (eveningStar() or eveningStar2()), text="ES", title="Evening Star", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black)
+
 alertcondition(morningStar() or eveningStar(), title="Morning/Evening Star")
 
-// x = bar_index
-// y = low
-// txt = tostring(open)
-// label.new(x, y, txt, color=color.red)
+//Symmetrical Triangle
+barcolor(symmetricalTriangle() ? color.white : na)
+plotshape(close > open and symmetricalTriangle(), text="ST", title="Symmetrical Triangle", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white)
+plotshape(close < open and symmetricalTriangle(), text="ST", title="Symmetrical Triangle", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black)
 
-// a = bar_index
-// b = high
-// text = tostring(close[1])
-// label.new(a, b, text, color=color.green)
+barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
+plotshape(close > open and symmetricalTriangleBreakout(), text="STB", title="Symmetrical Triangle Break Up", style = shape.labelup, location =  location.belowbar, color = color.lime, textcolor = color.white)
+plotshape(close < open and symmetricalTriangleBreakout(), text="STB", title="Symmetrical Triangle Break Down", style = shape.labeldown, location =  location.abovebar, color = color.red, textcolor = color.black)
+
+// three white soldiers / three black crows
+barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
+
+//Pinbar
+barcolor(spb and bullishPinbar  ? color.lime : na)
+barcolor(spb and bearishPinbar ? color.maroon : na)
