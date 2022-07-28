@@ -6,7 +6,7 @@ spb                   = input(true, title="Show Pinbar?")
 senf                  = input(true, title="Show Engulfing Bar?")
 skgr                  = input(true, title="Show Kangaroo Tail?")
 sms                   = input(true, title="Show Morning/Evening Star?")
-srft                  = input(true, title="Show Three Rising/Failing Bars?")
+srft                  = input(true, title="Show Rising/Failing Three?")
 s3ws                  = input(true, title="Show Three White Soldiers/Black Crows bars?")
 sstr                  = input(true, title="Show Symmetrical Triangle?")
 stz                   = input(true, title="Show Tension zone?")
@@ -14,6 +14,7 @@ sfk                   = input(true, title="Show Fakey. Inside bar false-break?")
 ssp                   = input(true, title="Show Deliberation/Stalled pattern?")
 scb                   = input(true, title="Show Channel Break Out?")
 snr7                  = input(true, title="Show NR7?")
+stlk                  = input(true, title="Show The Last Kiss?")
 eav                   = input(8, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
 wav                   = input(13, minval=1, maxval=100, title="EMA Depth For Wick Average/Volatility")
 hlLengthCheck         = input(8, minval=1, maxval=99, title="Highest/Lowest Length Check")
@@ -984,20 +985,73 @@ if close > open and close < close[2] and marubozuDnBar
 
 eveningStar2() => sms and evening2_firstBar and evening2_secondBar and evening2_thirdBar
 
+//=========================================================================|
+//                     THE LAST KISS                                       | 
+//=========================================================================|
+bool upTheLastKiss_firstBar     = false
+bool upTheLastKiss_secondBar    = false
+bool upTheLastKiss_thirdBar     = false
+bool upTheLastKiss_fourthBar    = false
+bool upTheLastKiss_fifthBar     = false
+bool upTheLastKiss_retestBar    = false
+
+if close[5] < open[5] and averageSpreadTaken[5]
+    upTheLastKiss_fifthBar := true
+
+if  close[4] >= close[5] and close[4] <= open[5] and open[4] > low[5] and low[4] > low[5]
+    upTheLastKiss_fourthBar := true
+
+if close[3]<=open[5] and open[3] >= close[5] and close[3]>=close[5] and low[3] > low[5] 
+    upTheLastKiss_thirdBar := true
+
+if close[2]<=open[5] and open[2] >= close[5] and close[2]>=close[5] and low[2] > low[5]
+    upTheLastKiss_secondBar := true
+
+if close[1] >= close[5] and close[1] > high[5]
+    upTheLastKiss_firstBar :=  true
+
+if  close > close[1] and low <= open[5]
+    upTheLastKiss_retestBar := true
+
+upTheLastKiss() => stlk and upTheLastKiss_firstBar and upTheLastKiss_secondBar and upTheLastKiss_thirdBar and upTheLastKiss_fourthBar and upTheLastKiss_fifthBar and upTheLastKiss_retestBar
+
+bool dnTheLastKiss_firstBar     = false
+bool dnTheLastKiss_secondBar    = false
+bool dnTheLastKiss_thirdBar     = false
+bool dnTheLastKiss_fourthBar    = false
+bool dnTheLastKiss_fifthBar     = false
+bool dnTheLastKiss_retestBar    = false
+
+if close[5] > open[5] and averageSpreadTaken[5]
+    dnTheLastKiss_fifthBar := true
+
+if close[4] <= close[5] and close[4] >= open[5] and open[4] < high[5] and high[4] < high[5]
+    dnTheLastKiss_fourthBar := true
+
+if close[3]>=open[5] and open[3] <= close[5] and close[3]<=close[5] and high[3] < high[5] 
+    dnTheLastKiss_thirdBar := true
+
+if close[2]>=open[5] and open[2] <= close[5] and close[2]<=close[5] and high[2] < high[5]
+    dnTheLastKiss_secondBar := true
+
+if close[1] < open[5] and close[1] < low[5]
+    dnTheLastKiss_firstBar :=  true
+
+if  close < close[1] and high >= close[5]
+    dnTheLastKiss_retestBar := true
+
+dnTheLastKiss() => stlk and dnTheLastKiss_firstBar and dnTheLastKiss_secondBar and dnTheLastKiss_thirdBar and dnTheLastKiss_fourthBar and dnTheLastKiss_fifthBar and dnTheLastKiss_retestBar
+
 //------------------------------------------------------------------------------
 // Tension zone
 barcolor(grg or ggr or grr or rgr or rgg or rrg? color.yellow : na )
 
+// rising/failling three
+barcolor(risingThree() or faillingThree() ? color.yellow : na)
+
 // Tension zone false break
 barcolor(falseBreakUp1 or falseBreakUp2 or falseBreakUp3 ? color.orange : na)
 barcolor(falseBreakDown1 or falseBreakDown2 or falseBreakDown3? color.orange : na)
-
-//fakey
-barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4 ? color.silver : na)
-barcolor(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4 ? color.silver : na)
-
-// rising/failling three
-barcolor(risingThree() or faillingThree() ? color.yellow : na)
 
 // rising/failling three false break
 barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : na)
@@ -1005,19 +1059,19 @@ barcolor(risingThreeFalseBreak() or faillingThreeFalseBreak() ? color.orange : n
 // rising/falling fail
 barcolor(risingThreeFail() or fallingThreeFail() ? color.orange : na)
 
-//Stalled pattern 
-barcolor(bullishStalled() or bearishStalled() ? color.blue : na)
-
-// three white soldiers / three black crows
-barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
+// NR7
+barcolor(nr7() ? color.yellow : na)
+barcolor(nr7f() ? color.orange : na)
 
 // Channel break
 barcolor(decreasingChannelBreakout() or ascendingChannelBreakout() ? color.yellow : na)
 barcolor(ascendingChannelFalseBreak() or decreasingChannelFalseBreak()? color.orange : na)
 
-// NR7
-barcolor(nr7() ? color.yellow : na)
-barcolor(nr7f() ? color.orange : na)
+//Stalled pattern 
+barcolor(bullishStalled() or bearishStalled() ? color.blue : na)
+
+// three white soldiers / three black crows
+barcolor(threeWhiterSoldier() or threeBlackCrows() ? color.blue : na)
 
 //outside bar
 barcolor(whiteOutsideBar() or blackOutsideBar() ? color.purple : na)
@@ -1025,11 +1079,18 @@ barcolor(whiteOutsideBar() or blackOutsideBar() ? color.purple : na)
 // Engulfing
 barcolor(whiteEngulfing() or blackEngulfing() ? color.purple : na)
 
-// Kangaroo
-barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
+// The Last Kiss
+barcolor(upTheLastKiss() or dnTheLastKiss() ? color.purple : na)
 
 // Morning/Evening Star
 barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() ? color.purple : na)
+
+// Kangaroo
+barcolor(topKangaroo() or bottomKangaroo()? color.silver : na)
+
+//fakey
+barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_up4 ? color.silver : na)
+barcolor(fakey_down1 or fakey_down2 or fakey_down3 or fakey_down4 ? color.silver : na)
 
 //Triangle
 barcolor(symmetricalTriangle() ? color.white : na)
@@ -1038,3 +1099,4 @@ barcolor(symmetricalTriangleBreakout() ? color.yellow : na)
 //Pinbar
 barcolor(spb and bullishPinbar ? color.lime : na)
 barcolor(spb and bearishPinbar ? color.maroon : na)
+
