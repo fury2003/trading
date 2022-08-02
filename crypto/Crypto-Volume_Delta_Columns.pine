@@ -16,7 +16,7 @@ string  i_colorTheme          = input(TH2,    "Color Theme",                    
 string  i_displayMode         = input(DP2,    "Main Display",                               group = GP1, options = [DP1, DP2])
 bool    i_displayBalanceMa    = input(OFF,    "With Volume Balance: Display Its MA",        group = GP1, options = [OFF, ON]) == ON
 bool    i_showTotalVolumeMA   = input(ON,     "With Columns: Display Total Volume MA",      group = GP1, options = [OFF, ON]) == ON
-string  i_displayDivMode      = input(VD2,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
+string  i_displayDivMode      = input(VD4,    "Show Divergences",                           group = GP1, options = [VD4, VD2, VD3, VD1], tooltip = "A divergence is defined as a discrepancy between the direction of the chart bar and the volume balance, in whichever mode is displayed.")
 string  i_colorThemeDiv       = input(DC2,    "Color",                                      group = GP1, options = [DC1, DC2], tooltip = "'" + DC1 + "' only applies to chart bars and volume columns. '")
 bool    i_realtimeMode        = input(ON,     "Realtime Mode",                              group = GP1, options = [OFF, ON], tooltip = "Enables a distinct calculation mode which works only on realtime bars and uses price and volume differences between realtime bar updates to determine Buy/Sell/Neutral volume.") == ON
 bool    i_showPressureSignal  = input(ON,     "Show Pressure Signals",                      group = GP1, options = [OFF, ON]) == ON
@@ -25,10 +25,10 @@ bool    i_showAverageVolume   = input(ON,     "Show Volume Average",            
 bool    i_showRVOL            = input(ON,     "Show RVOL Calculation",                      group = GP1, options = [OFF, ON]) == ON
 bool    i_showPressurePer     = input(ON,     "Show Pressure Direction Percentage",         group = GP1, options = [OFF, ON]) == ON
 string  i_itfType             = input(TF2,    "Intrabar timeframe",                         group = GP2, inline = "res", options = [TF1, TF2, TF3], tooltip = "Only 'Fixed' mode uses the timeframe selected in the dropdown menu. Otherwise, the intrabar timeframe is automatically calculated from the chart's timeframe.")
-string  i_itfTypeFixedRes     = input("15",   "",                                           group = GP2, inline = "res", type = input.resolution)
-int     i_pressureLookBack    = input(17,     "Lookback bars for Pressure Percentage",      group = GP2)
-int     i_totalVolMaLength    = input(26,     "Total Volume MA Period",                     group = GP2)
-int     i_balanceMaLength     = input(65,     "Lookback bars for Average",                  group = GP2, tooltip = "The Buy and Sell volume MAs calculated using this period are the same MAs used in the 'Relative Delta Volume' calculations.")
+string  i_itfTypeFixedRes     = input("30",   "",                                           group = GP2, inline = "res", type = input.resolution)
+int     i_pressureLookBack    = input(8,      "Lookback bars for Pressure Percentage",      group = GP2)
+int     i_totalVolMaLength    = input(25,     "Total Volume MA Period",                     group = GP2)
+int     i_balanceMaLength     = input(13,     "Buy/Sell Volume Balance MA Period",          group = GP2, tooltip = "The Buy and Sell volume MAs calculated using this period are the same MAs used in the 'Relative Delta Volume' calculations.")
 int     i_showLast            = input(500,    "Show Last",                                  group = GP2)
 
 // ————— Input settings.
@@ -400,8 +400,19 @@ p_zeroPlot = plot(okToPlot and i_showTotalVolumeMA and displayColumns ? 0 : na, 
 fill(p_volMaPlot, p_zeroPlot, myOrangeDarkDark)
 
 // ————— Pressure Signal
+// rvol4 = result < effort 
+//upbar + rvol4 + appear on top      => absorb supply
+//upbar + rvol4 + appear at bottom   => buying absorb  
+//downbar + rvol4 + appear on top    => price not able to move up = distribution
+//downbar + rvol4 + appear at bottom => buying absorb  
 plotshape(i_showPressureSignal and rvol4 < sma2 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
 plotshape(i_showPressureSignal and rvol4 < sma2 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="E", show_last=i_showLast)
+
+// rvol3 = result > effort 
+//upbar + rvol3 + appear on top      => bulltrap?
+//upbar + rvol3 + appear at bottom   => no supply = easy move up
+//downbar + rvol3 + appear on top    => no demand = 
+//downbar + rvol3 + appear at bottom => beartrap?
 plotshape(i_showPressureSignal and rvol3 > sma1 and open < close, color=color.new(color.lime, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
 plotshape(i_showPressureSignal and rvol3 > sma1 and open > close, color=color.new(color.maroon, 0), textcolor=color.white, style = shape.labelup, location = location.top, size=size.tiny, text="R", show_last=i_showLast)
 
@@ -435,11 +446,18 @@ f_fillNeutralVolume(_table, _column, _row, _value) =>
 	_cellText = tostring(_value, "#.##") + x
 	table.cell(_table, _column, _row, _cellText, text_color = myGrayMedium)
 
+// current total vol = volNt + volUp + volDn
 if barstate.islast and barstate.isrealtime and i_showCurrentVolume
     f_fillTotalVolume(perfTable,    0, 0, volSum)
+
+//average vol = calculate from ema 
 if barstate.islast and barstate.isrealtime and i_showAverageVolume
 	f_fillAverageVolume(perfTable,  1, 0, avg3)
+
+// rvol2 = volSum / avg3
 if barstate.islast and barstate.isrealtime and i_showRVOL
 	f_fillRelativeVolume(perfTable, 2, 0, rvol2)
+
+//percent = effor >< result
 if barstate.islast and barstate.isrealtime and i_showPressurePer
 	f_fillPressureSignal(perfTable, 3, 0, percent)
