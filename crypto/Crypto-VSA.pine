@@ -1,0 +1,374 @@
+//@version=4
+study("Crypto - VSA", overlay=true, max_labels_count=100)
+//, max_labels_count=100
+
+sbuvi                 = input(true, title="Show Bullish Validation Volume Increase?", group="Bullish")
+sbuvd                 = input(true, title="Show Bullish Validation Volume Decrease?", group="Bullish")
+sbudi                 = input(true, title="Show Bullish Divergence Volume Increase?", group="Bullish")
+sbudd                 = input(true, title="Show Bullish Divergence Volume Decrease?", group="Bullish")
+sbevi                 = input(true, title="Show Bearish Validation Volume Increase?", group="Bearish")
+sbevd                 = input(true, title="Show Bearish Validation Volume Decrease?", group="Bearish")
+sbedi                 = input(true, title="Show Bearish Divergence Volume Increase?", group="Bearish")
+sbedd                 = input(true, title="Show Bearish Divergence Volume Decrease?", group="Bearish")
+eav                   = input(8, minval=1, maxval=100, title="EMA Depth For Body Average/Volatility")
+wav                   = input(13, minval=1, maxval=100, title="EMA Depth For Wick Average/Volatility")
+pivotlbar             = input(8, minval=1, maxval=99, title="Length to Highest/Lowest")
+wm                    = input(defval = 2.0, step = 0.5, minval = 2.0, maxval=5.0, title="Wick Multiplier")
+bodyPercentage        = input(defval = 0.40, step = 0.1, minval = 0.1, maxval=0.99, title="Body Percentage")
+pctShadow             = input(50, minval=1, maxval=99, title="Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
+color_validation      = input(color.lime, "Color Validation")
+color_divergence      = input(color.fuchsia, "Color Divergence")
+
+//Volume Average
+emaVol25 = ema(volume, 25)
+
+ema25 = ema(close, 25)
+highAboveEMA25  = high > ema25
+highBelowEMA25  = high < ema25
+closeAboveEMA25 = close > ema25 
+closeBelowEMA25 = close < ema25 
+openAboveEMA25  = open > ema25
+openBelowEMA25  = open < ema25 
+lowAboveEMA25   = low > ema25
+lowBelowEMA25   = low < ema25
+
+// spread|range
+spread    = abs(close - open)
+// spread    = bodyHigh - bodyLow
+bodyHigh  = max(close, open)
+bodyLow   = min(close, open)
+range     = high - low
+upShadow  = high - bodyHigh
+dnShadow  = bodyLow - low
+whiteBody = open < close
+blackBody = open > close
+
+// EMA
+spreadAvg             = ema(spread, eav)
+rangeAvg              = ema(range, eav)
+averageTopWickSize    = sma(upShadow, wav)
+averageBottomWickSize = sma(dnShadow, wav)
+
+bigBody         = spread > spreadAvg*2
+mediumLongBody  = spread > spreadAvg and spread < spreadAvg*2
+longBody        = spread > spreadAvg
+smallBody       = spread < spreadAvg
+mediumSmallBody = spread < spreadAvg and spread > spreadAvg/2
+tinyBody        = spread < spreadAvg/2
+bodyMiddle      = spread / 2 + bodyLow
+
+bigSpreadTaken     = spread > range*0.7
+averageSpreadTaken = spread > range*0.5
+smallSpreadTaken   = spread > range*0.3
+tinySpreadTaken    = spread < range*0.3
+
+// projection check
+f_isProjectionGettingSmaller() =>
+    bool isProjectionGettingSmaller = false
+    wickA = close > open ? low[3] - low[2] : high[2] - high[3]
+    wickB = close > open ? low[2] - low[1] : high[1] - high[2]
+    wickC = close > open ? low[1] - low    : high - high[1]
+    if wickA > wickB and wickB > wickC
+        isProjectionGettingSmaller := true
+
+	_isProjectionGettingSmaller = isProjectionGettingSmaller
+    [_isProjectionGettingSmaller]
+
+f_dnLastProjectionIsBiggest() =>
+    bool lastProjectionIsBiggest = false
+    wickA = low[3] - low[2] 
+    wickB = low[2] - low[1] 
+    wickC = low[1] - low  
+    if wickA < wickB and wickB < wickC
+        lastProjectionIsBiggest := true
+
+	_dnLastProjectionIsBiggest = lastProjectionIsBiggest
+    [_dnLastProjectionIsBiggest]
+
+f_upLastProjectionIsBiggest() =>
+    bool lastProjectionIsBiggest = false
+    wickA = high[2] - high[3] 
+    wickB = high[1] - high[2] 
+    wickC = high - high[1]  
+    if wickA < wickB and wickB < wickC
+        lastProjectionIsBiggest := true
+
+	_upLastProjectionIsBiggest = lastProjectionIsBiggest
+    [_upLastProjectionIsBiggest]
+
+// smallest spread check
+f_isSmallest(start_index, end_index) =>
+    bool isSmallestSpread = true
+    for i = start_index to end_index
+        if spread > spread[i] 
+            isSmallestSpread := false
+            break
+
+	_isSmallestSpread = isSmallestSpread
+    [_isSmallestSpread]
+
+// lowest check
+f_isLowest(lowest_index, start_index, end_index) =>
+    bool isLowestLow = true
+    for i = start_index to end_index
+        if low[lowest_index] > low[i] 
+            isLowestLow := false
+            break
+
+	_isLowestLow = isLowestLow
+    [_isLowestLow]
+// highest check
+f_isHighest(highest_index, start_index, end_index) =>
+    bool isHighestHigh = true
+    for i = start_index to end_index
+        if high[highest_index] < high[i]
+            isHighestHigh := false
+            break
+
+	_isHighestHigh = isHighestHigh
+    [_isHighestHigh]
+
+[firstPreviousBarIsHighestHigh]  = f_isHighest(1, 2, pivotlbar)
+[secondPreviousBarIsHighestHigh] = f_isHighest(2, 3, pivotlbar)
+[firstPreviousBarIsLowestLow]    = f_isLowest(1, 2, pivotlbar)
+[secondPreviousBarIsLowestLow]   = f_isLowest(2, 3, pivotlbar)
+
+highestBarCheck() => highestbars(high, pivotlbar) == 0 ? 1 : 0
+lowestBarCheck()  => lowestbars(low, pivotlbar) == 0 ? 1 : 0
+highestBarCheckWithParam(length) => highestbars(high, length) == 0 ? 1 : 0
+lowestBarCheckWithParam(length)  => lowestbars(low, length) == 0 ? 1 : 0
+
+// Marubozu
+// tong chieu dau rau nen tren va rau nen duoi bang x% cua range nen
+rangeTakenByBothShadows() => (upShadow + dnShadow) <= (high - low)*0.7 ? 1 : 0
+// chieu dai rau nen tren so voi muc cho phep cua rau nen
+spreadTakenByUpShadow()   => upShadow < pctShadow/100*spread ? 1 : 0
+// chieu dai rau nen duoi so voi muc cho phep cua rau nen
+spreadTakenByDnShadow()   => dnShadow < pctShadow/100*spread ? 1 : 0
+
+marubozuUpBar = close > open and rangeTakenByBothShadows() and spreadTakenByUpShadow()
+marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnShadow()
+
+//=========================================================================|
+//                    VALIDATION VOLUME INCREASE                           | 
+//=========================================================================|
+// bullish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1 < vol (best case)
+bullValidation_VI1_2()      => close[2] > open[2] ? 1 : 0
+bullValidation_VI1_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
+bullValidation_VI1_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+
+bool bullValidation_VI1_spread       = false
+bool bullValidation_VI1_volume       = false
+
+if spread > spread[2] and spread > spread[1]
+    bullValidation_VI1_spread := true
+
+if volume[1] > volume[2] and volume > volume[1]
+    bullValidation_VI1_volume := true
+
+bullishValidation_VI1 = sbuvi and bullValidation_VI1_0() and bullValidation_VI1_2() and bullValidation_VI1_1() and bullValidation_VI1_spread and bullValidation_VI1_volume 
+
+// bullish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1] > vol
+bullValidation_VI2_2()      => close[2] > open[2] ? 1 : 0
+bullValidation_VI2_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
+bullValidation_VI2_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+bool bullValidation_VI2_spread       = false
+bool bullValidation_VI2_volume       = false
+
+if spread > spread[2] and spread > spread[1]
+    bullValidation_VI2_spread := true
+
+if volume[1] < emaVol25 and volume[2] < emaVol25
+    bullValidation_VI2_volume := volume > emaVol25 and volume > volume[1] and volume > volume[2]
+
+bullishValidation_VI2 = sbuvi and bullValidation_VI2_0() and bullValidation_VI2_1() and bullValidation_VI2_2() and bullValidation_VI2_spread and bullValidation_VI2_volume 
+
+// bullish - spread[2] < spread[1] and spread[1] > spread && vol[2] < vol[1] and vol[1] < vol
+bullValidation_VI3_2()      => close[2] > open[2] ? 1 : 0
+bullValidation_VI3_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
+bullValidation_VI3_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+bool bullValidation_VI3_spread       = false
+bool bullValidation_VI3_volume       = false
+
+if  spread > spread[2] and spread < spread[1] 
+    bullValidation_VI3_spread := spread > spread[1]*0.7
+
+if volume[1] > volume[2] and volume > volume[1]
+    bullValidation_VI3_volume := true
+
+bullishValidation_VI3 = sbuvi and bullValidation_VI3_0() and bullValidation_VI3_1() and bullValidation_VI3_2() and bullValidation_VI3_spread and bullValidation_VI3_volume 
+
+// bearish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1 < vol (best case)
+bearValidation_VI1_2()      => close[2] < open[2] ? 1 : 0
+bearValidation_VI1_1()      => close[1] < open[1] and close[1] < close[2] and averageSpreadTaken[1] ? 1 : 0
+bearValidation_VI1_0()      => close < open and close < close[1] and averageSpreadTaken ? 1 : 0
+
+bool bearValidation_VI1_spread       = false
+bool bearValidation_VI1_volume       = false
+
+if spread > spread[2] and spread > spread[1]
+    bearValidation_VI1_spread := true
+
+if volume[1] > volume[2] and volume > volume[1]
+    bearValidation_VI1_volume := true
+
+bearishValidation_VI1 = sbevi and bearValidation_VI1_0() and bearValidation_VI1_2() and bearValidation_VI1_1() and bearValidation_VI1_spread and bearValidation_VI1_volume 
+
+// bearish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1] > vol
+bearValidation_VI2_2()      => close[2] < open[2] ? 1 : 0
+bearValidation_VI2_1()      => close[1] < open[1] and close[1] < close[2] and averageSpreadTaken[1] ? 1 : 0
+bearValidation_VI2_0()      => close < open and close < close[1] and averageSpreadTaken ? 1 : 0
+bool bearValidation_VI2_spread       = false
+bool bearValidation_VI2_volume       = false
+
+if spread > spread[2] and spread > spread[1]
+    bearValidation_VI2_spread := true
+
+if volume[1] < emaVol25 and volume[2] < emaVol25
+    bearValidation_VI2_volume := volume > emaVol25 and volume > volume[1] and volume > volume[2]
+
+bearishValidation_VI2 = sbevi and bearValidation_VI2_0() and bearValidation_VI2_1() and bearValidation_VI2_2() and bearValidation_VI2_spread and bearValidation_VI2_volume 
+
+// bearish - spread[2] < spread[1] and spread[1] > spread && vol[2] < vol[1] and vol[1] < vol
+bearValidation_VI3_2()      => close[2] < open[2] ? 1 : 0
+bearValidation_VI3_1()      => close[1] < open[1] and close[1] < close[2] and averageSpreadTaken[1] ? 1 : 0
+bearValidation_VI3_0()      => close < open and close < close[1] and averageSpreadTaken ? 1 : 0
+bool bearValidation_VI3_spread       = false
+bool bearValidation_VI3_volume       = false
+
+if  spread > spread[2] and spread < spread[1] 
+    bearValidation_VI3_spread := spread > spread[1]*0.7
+
+if volume[1] > volume[2] and volume > volume[1]
+    bearValidation_VI3_volume := true
+
+bearishValidation_VI3 = sbevi and bearValidation_VI3_0() and bearValidation_VI3_1() and bearValidation_VI3_2() and bearValidation_VI3_spread and bearValidation_VI3_volume 
+
+//=========================================================================|
+//                    BULLISH DIVERGENCE                                   | 
+//=========================================================================|
+// volume increase + up bar smaller == R<E = Distribution
+bullDivergence_VI_2()      => close[2] > open[2]                                                                          ? 1 : 0
+bullDivergence_VI_1()      => close[1] > open[1] and close[1] > close[2]                                                  ? 1 : 0
+bullDivergence_VI_0()      => close > open and (close > high[1] or close > high[2]) and upShadow > dnShadow               ? 1 : 0
+bullDivergence_VI_volume() => volume[1] > volume[2] and volume > volume[1] and volume > emaVol25                          ? 1 : 0 
+bullDivergence_VI_spread() => spread < spreadAvg and spread < spread[2] and spread < spread[1]                            ? 1 : 0 
+
+bullishDivergence_VI = sbudi and bullDivergence_VI_0() and bullDivergence_VI_2() and bullDivergence_VI_1() and bullDivergence_VI_volume() and bullDivergence_VI_spread()
+
+// volume decrease + up bar bigger = R>E = bull trap
+bullDivergence_VD_0()      => close > open and marubozuUpBar and closeAboveEMA25                                                            ? 1 : 0
+bullDivergence_VD_volume() => volume < volume[1] and volume < volume[2] and volume < emaVol25                             ? 1 : 0 
+bullDivergence_VD_spread() => spread > spreadAvg                                                                          ? 1 : 0 
+
+bullishDivergence_VD = sbudd and bullDivergence_VD_0() and bullDivergence_VD_volume() and bullDivergence_VD_spread()
+
+//=========================================================================|
+//                    BEARISH DIVERGENCE                                   | 
+//=========================================================================|
+// down bars getting smaller + volume increase == R<E = accumulation 
+bearDivergence_VI_2()      => close[2] < open[2]                                                                          ? 1 : 0
+bearDivergence_VI_1()      => close[1] < open[1] and close[1] < close[2]                                                  ? 1 : 0
+bearDivergence_VI_0()      => close < open and (close < low[1] or close < low[2]) and upShadow < dnShadow                 ? 1 : 0
+bearDivergence_VI_volume() => volume[1] > volume[2] and volume > volume[1] and volume > emaVol25  ? 1 : 0 
+bearDivergence_VI_spread() => spread < spreadAvg and spread < spread[2] and spread < spread[1]                            ? 1 : 0 
+
+bearishDivergence_VI = sbedi and bearDivergence_VI_0() and bearDivergence_VI_2() and bearDivergence_VI_1() and bearDivergence_VI_volume() and bearDivergence_VI_spread()
+
+// volume decrease + down bar bigger = R>E = bear trap or shakeout
+bearDivergence_VD_0()      => close < open and marubozuDnBar and closeBelowEMA25                 ? 1 : 0
+bearDivergence_VD_volume() => volume < volume[1] and volume < volume[2] and volume < emaVol25  ? 1 : 0 
+bearDivergence_VD_spread() => spread > spreadAvg                             ? 1 : 0 
+
+bearishDivergence_VD = sbedd and bearDivergence_VD_0() and bearDivergence_VD_volume() and bearDivergence_VD_spread()
+
+//=========================================================================|
+//                    VALIDATION VOLUME DECREASE                           | 
+//=========================================================================|
+// bullish  - spread[3] > spread[2] and spread[2] > spread[1] and spread[1] > spread && vol[3] > vol[2] and vol[2] > vol[1] and vol[1] > vol(best case)
+bullValidation_VD_3()      => close[3] > open[3] and averageSpreadTaken[3] ? 1 : 0
+bullValidation_VD_2()      => close[2] > open[2] and close[2] > close[3] ? 1 : 0
+bullValidation_VD_1()      => close[1] > open[1] and high[1] > high[2] ? 1 : 0
+bullValidation_VD_0()      => close > open ? 1 : 0
+bullValidation_VD_volume() => volume[3] > volume[2] and volume[2] > volume and volume[3] > volume ? 1 : 0 
+bullValidation_VD_spread() => spread[3] > spread[2] and spread[2] > spread[1]  and spread[2] > spread ? 1 : 0 
+
+bullishValidation_VD = sbuvd and bullValidation_VD_3() and bullValidation_VD_2() and bullValidation_VD_1() and bullValidation_VD_0() and bullValidation_VD_spread() and bullValidation_VD_volume()
+
+// bearish
+bearValidation_VD_3()      => close[3] < open[3] and averageSpreadTaken[3] ? 1 : 0
+bearValidation_VD_2()      => close[2] < open[2] and close[2] < close[3]   ? 1 : 0
+bearValidation_VD_1()      => close[1] < open[1] and low[1] < low[2]   ? 1 : 0
+bearValidation_VD_0()      => close < open           ? 1 : 0
+
+bearValidation_VD_volume() => volume[3] > volume[2] and volume[2] > volume and volume[3] > volume ? 1 : 0 
+bearValidation_VD_spread() => spread[3] > spread[2] and spread[2] > spread[1] and spread[2] > spread ? 1 : 0 
+
+bearishValidation_VD = sbevd and bearValidation_VD_3() and bearValidation_VD_2() and bearValidation_VD_1() and bearValidation_VD_0() and bearValidation_VD_spread() and bearValidation_VD_volume()
+
+
+//=====================================================================================================================================================|
+patternLabelPosLow = low - (atr(30) * 0.6)
+patternLabelPosHigh = high + (atr(30) * 0.6)
+labelPosition = close > open ? patternLabelPosLow : patternLabelPosHigh
+labelStyle = close > open ? label.style_label_up : label.style_label_down
+
+// validation - volume increase + up bar bigger
+// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na, offset=-2)
+// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na, offset=-1)
+// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na)
+
+plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
+plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
+plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+
+// validation - volume increase + down bar bigger
+// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na, offset=-2)
+// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na, offset=-1)
+// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na)
+
+plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
+plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
+plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+
+
+// validation - volume decrease + up bar smaller
+// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-3)
+// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-2)
+// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-1)
+// barcolor(bullishValidation_VD ? color_bu_momentum : na)
+
+plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
+plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
+plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-3)
+plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+
+// validation - Bullish R<E
+// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-3)
+// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-2)
+// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-1)
+// barcolor(bearishValidation_VD ? color_be_momentum : na)
+
+plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
+plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
+plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-3)
+plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+
+
+// divergence - R<E
+// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na, offset=-2)
+// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na, offset=-1)
+// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na)
+
+plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
+plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
+plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+
+
+plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
+plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
+plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+
+plotshape(bullishDivergence_VD, color=color.yellow, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+plotshape(bearishDivergence_VD, color=color.yellow, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+
