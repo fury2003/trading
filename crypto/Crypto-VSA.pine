@@ -17,7 +17,7 @@ wm                    = input(defval = 2.0, step = 0.5, minval = 2.0, maxval=5.0
 bodyPercentage        = input(defval = 0.40, step = 0.1, minval = 0.1, maxval=0.99, title="Body Percentage")
 pctShadow             = input(50, minval=1, maxval=99, title="Percentage Input Of Up/Down Shadow, What % The Wick Of Candle Has To Be Compared To Body")
 color_validation      = input(color.lime, "Color Validation")
-color_divergence      = input(color.fuchsia, "Color Divergence")
+color_divergence      = input(color.orange, "Color Divergence")
 
 //Volume Average
 emaVol25 = ema(volume, 25)
@@ -128,6 +128,32 @@ f_isHighest(highest_index, start_index, end_index) =>
 	_isHighestHigh = isHighestHigh
     [_isHighestHigh]
 
+f_upDnNtBar() =>
+    varip float _prevClose = open
+    varip float _upBar = 0.
+    varip float _dnBar = 0.
+    varip float _neBar = 0.
+
+    if barstate.isnew
+        _upBar := 0.
+        _dnBar := 0.
+        _neBar := 0.
+        _prevClose := nz(close[1])
+    // Add this update's volume to the proper up/dn/nt slot, as per movement of price since the last update.
+    if close > _prevClose
+        _upBar += close - open
+    else if close < _prevClose
+        _dnBar += open - close
+    else
+        _neBar += close
+    _prevClose  := close
+    [_upBar, _dnBar, _neBar]
+
+[_upBar, _dnBar, _neBar] = f_upDnNtBar()
+
+float upBarMa       = ema(_upBar, eav)
+float dnBarMa       = ema(_dnBar, eav)
+
 [firstPreviousBarIsHighestHigh]  = f_isHighest(1, 2, pivotlbar)
 [secondPreviousBarIsHighestHigh] = f_isHighest(2, 3, pivotlbar)
 [firstPreviousBarIsLowestLow]    = f_isLowest(1, 2, pivotlbar)
@@ -155,7 +181,7 @@ marubozuDnBar = close < open and rangeTakenByBothShadows() and spreadTakenByDnSh
 // bullish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1 < vol (best case)
 bullValidation_VI1_2()      => close[2] > open[2] ? 1 : 0
 bullValidation_VI1_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
-bullValidation_VI1_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+bullValidation_VI1_0()      => close > open and close > close[1] and (averageSpreadTaken or spread > spreadAvg) ? 1 : 0
 
 bool bullValidation_VI1_spread       = false
 bool bullValidation_VI1_volume       = false
@@ -171,7 +197,7 @@ bullishValidation_VI1 = sbuvi and bullValidation_VI1_0() and bullValidation_VI1_
 // bullish - spread[2] < spread[1] and spread[1] < spread && vol[2] < vol[1] and vol[1] > vol
 bullValidation_VI2_2()      => close[2] > open[2] ? 1 : 0
 bullValidation_VI2_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
-bullValidation_VI2_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+bullValidation_VI2_0()      => close > open and close > close[1] and (averageSpreadTaken or spread > spreadAvg) ? 1 : 0
 bool bullValidation_VI2_spread       = false
 bool bullValidation_VI2_volume       = false
 
@@ -186,7 +212,7 @@ bullishValidation_VI2 = sbuvi and bullValidation_VI2_0() and bullValidation_VI2_
 // bullish - spread[2] < spread[1] and spread[1] > spread && vol[2] < vol[1] and vol[1] < vol
 bullValidation_VI3_2()      => close[2] > open[2] ? 1 : 0
 bullValidation_VI3_1()      => close[1] > open[1] and close[1] > close[2] and averageSpreadTaken[1] ? 1 : 0
-bullValidation_VI3_0()      => close > open and close > close[1] and averageSpreadTaken ? 1 : 0
+bullValidation_VI3_0()      => close > open and close > close[1] and (averageSpreadTaken or spread > spreadAvg) ? 1 : 0
 bool bullValidation_VI3_spread       = false
 bool bullValidation_VI3_volume       = false
 
@@ -248,6 +274,7 @@ bearishValidation_VI3 = sbevi and bearValidation_VI3_0() and bearValidation_VI3_
 //                    BULLISH DIVERGENCE                                   | 
 //=========================================================================|
 // volume increase + up bar smaller == R<E = Distribution
+// 3 bars
 bullDivergence_VI_2()      => close[2] > open[2]                                                                          ? 1 : 0
 bullDivergence_VI_1()      => close[1] > open[1] and close[1] > close[2]                                                  ? 1 : 0
 bullDivergence_VI_0()      => close > open and (close > high[1] or close > high[2]) and upShadow > dnShadow               ? 1 : 0
@@ -256,31 +283,85 @@ bullDivergence_VI_spread() => spread < spreadAvg and spread < spread[2] and spre
 
 bullishDivergence_VI = sbudi and bullDivergence_VI_0() and bullDivergence_VI_2() and bullDivergence_VI_1() and bullDivergence_VI_volume() and bullDivergence_VI_spread()
 
+// 1 bar
+bullDivergence_VI2_0()      => close > open              ? 1 : 0
+bullDivergence_VI2_volume() => (volume >= volume[1] or volume >= volume[2]) and volume > emaVol25                         ? 1 : 0 
+bullDivergence_VI2_spread() => spread < upBarMa                         ? 1 : 0 
+bullDivergence_VI2_shadow() => lowestBarCheck() and dnShadow > upShadow and dnShadow > averageBottomWickSize      ? 1 : 0 
+
+bullishDivergence_VI2 = sbudi and bullDivergence_VI2_0() and bullDivergence_VI2_volume() and bullDivergence_VI2_spread() and bullDivergence_VI2_shadow()
+
+// 1 bar
+bullDivergence_VI3_0()      => close > open              ? 1 : 0
+bullDivergence_VI3_volume() => (volume > volume[1] + volume[2] or volume[1] > volume[2] + volume[3]) and volume > emaVol25                         ? 1 : 0 
+bullDivergence_VI3_spread() => spread < upBarMa                         ? 1 : 0 
+
+bullishDivergence_VI3 = sbudi and bullDivergence_VI3_0() and bullDivergence_VI3_volume() and bullDivergence_VI3_spread() 
+
+
 // volume decrease + up bar bigger = R>E = bull trap
-bullDivergence_VD_0()      => close > open and marubozuUpBar and closeAboveEMA25                                                            ? 1 : 0
+bullDivergence_VD_0()      => close > open and close > high[1] and marubozuUpBar and closeAboveEMA25                      ? 1 : 0
 bullDivergence_VD_volume() => volume < volume[1] and volume < volume[2] and volume < emaVol25                             ? 1 : 0 
-bullDivergence_VD_spread() => spread > spreadAvg                                                                          ? 1 : 0 
+bullDivergence_VD_spread() => spread > spreadAvg and (spread > spread[1] or spread > spread[2]) and spread > upBarMa      ? 1 : 0 
 
 bullishDivergence_VD = sbudd and bullDivergence_VD_0() and bullDivergence_VD_volume() and bullDivergence_VD_spread()
+
+// up bars getting bigger + volume decrease == R>E = sign of weakness
+bullDivergence_VD2_2()      => close[2] > open[2]                                     ? 1 : 0
+bullDivergence_VD2_1()      => close[1] > open[1] and close[1] > close[2]             ? 1 : 0
+bullDivergence_VD2_0()      => close > open                                           ? 1 : 0
+bullDivergence_VD2_volume() => volume[2] > volume[1] and volume[2] > volume and volume[2] > emaVol25   ? 1 : 0 
+bullDivergence_VD2_spread() => spread[1] > spread[2] and spread > spread[1]           ? 1 : 0 
+
+bullishDivergence_VD2 = sbudd and bullDivergence_VD2_0() and bullDivergence_VD2_1() and bullDivergence_VD2_2() and bullDivergence_VD2_volume() and bullDivergence_VD2_spread()
 
 //=========================================================================|
 //                    BEARISH DIVERGENCE                                   | 
 //=========================================================================|
 // down bars getting smaller + volume increase == R<E = accumulation 
+// 3 bars
 bearDivergence_VI_2()      => close[2] < open[2]                                                                          ? 1 : 0
 bearDivergence_VI_1()      => close[1] < open[1] and close[1] < close[2]                                                  ? 1 : 0
 bearDivergence_VI_0()      => close < open and (close < low[1] or close < low[2]) and upShadow < dnShadow                 ? 1 : 0
-bearDivergence_VI_volume() => volume[1] > volume[2] and volume > volume[1] and volume > emaVol25  ? 1 : 0 
+bearDivergence_VI_volume() => volume[1] > volume[2] and volume > volume[1] and volume > emaVol25                          ? 1 : 0 
 bearDivergence_VI_spread() => spread < spreadAvg and spread < spread[2] and spread < spread[1]                            ? 1 : 0 
 
 bearishDivergence_VI = sbedi and bearDivergence_VI_0() and bearDivergence_VI_2() and bearDivergence_VI_1() and bearDivergence_VI_volume() and bearDivergence_VI_spread()
 
+// 1 bar
+bearDivergence_VI2_0()      => close < open              ? 1 : 0
+bearDivergence_VI2_volume() => (volume > volume[1] or volume > volume[2]) and volume > emaVol25                         ? 1 : 0 
+bearDivergence_VI2_spread() => spread < dnBarMa                         ? 1 : 0 
+bearDivergence_VI2_shadow() => highestBarCheck() and dnShadow < upShadow and upShadow > averageTopWickSize                         ? 1 : 0 
+
+bearishDivergence_VI2 = sbedi and bearDivergence_VI2_0() and bearDivergence_VI2_volume() and bearDivergence_VI2_spread() and bearDivergence_VI2_shadow()
+
+// 1 bar
+bearDivergence_VI3_0()      => close < open              ? 1 : 0
+bearDivergence_VI3_volume() => (volume >= volume[1] or volume >= volume[2]) and volume > emaVol25                         ? 1 : 0 
+bearDivergence_VI3_spread() => spread < dnBarMa                         ? 1 : 0 
+
+bearishDivergence_VI3 = sbedi and bearDivergence_VI3_0() and bearDivergence_VI3_volume() and bearDivergence_VI3_spread()
+
 // volume decrease + down bar bigger = R>E = bear trap or shakeout
-bearDivergence_VD_0()      => close < open and marubozuDnBar and closeBelowEMA25                 ? 1 : 0
-bearDivergence_VD_volume() => volume < volume[1] and volume < volume[2] and volume < emaVol25  ? 1 : 0 
-bearDivergence_VD_spread() => spread > spreadAvg                             ? 1 : 0 
+// at the bottom = shakeout
+// on the top = sign of weakness
+// 1 bar
+bearDivergence_VD_0()      => close < open and close < low[1] and marubozuDnBar and closeBelowEMA25                  ? 1 : 0
+bearDivergence_VD_volume() => volume < volume[1] and volume < volume[2] and volume < emaVol25                        ? 1 : 0 
+bearDivergence_VD_spread() => spread > spreadAvg and (spread > spread[1] or spread > spread[2]) and spread > dnBarMa ? 1 : 0 
 
 bearishDivergence_VD = sbedd and bearDivergence_VD_0() and bearDivergence_VD_volume() and bearDivergence_VD_spread()
+
+// down bars getting bigger + volume decrease == R>E = sign of weakness
+// 3 bars
+bearDivergence_VD2_2()      => close[2] < open[2]                                     ? 1 : 0
+bearDivergence_VD2_1()      => close[1] < open[1] and close[1] < close[2]             ? 1 : 0
+bearDivergence_VD2_0()      => close < open                                           ? 1 : 0
+bearDivergence_VD2_volume() => volume[2] > volume[1] and volume[2] > volume and volume[2] > emaVol25   ? 1 : 0 
+bearDivergence_VD2_spread() => spread[1] > spread[2] and spread > spread[1]           ? 1 : 0 
+
+bearishDivergence_VD2 = sbedd and bearDivergence_VD2_0() and bearDivergence_VD2_1() and bearDivergence_VD2_2() and bearDivergence_VD2_volume() and bearDivergence_VD2_spread()
 
 //=========================================================================|
 //                    VALIDATION VOLUME DECREASE                           | 
@@ -314,61 +395,47 @@ labelPosition = close > open ? patternLabelPosLow : patternLabelPosHigh
 labelStyle = close > open ? label.style_label_up : label.style_label_down
 
 // validation - volume increase + up bar bigger
-// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na, offset=-2)
-// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na, offset=-1)
-// barcolor(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3 ? color_bu_momentum : na)
-
 plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
 plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
 plotshape(bullishValidation_VI1 or bullishValidation_VI2 or bullishValidation_VI3, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny)
 
 // validation - volume increase + down bar bigger
-// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na, offset=-2)
-// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na, offset=-1)
-// barcolor(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3 ? color_be_momentum : na)
-
 plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
 plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
 plotshape(bearishValidation_VI1 or bearishValidation_VI2 or bearishValidation_VI3, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
 
-
 // validation - volume decrease + up bar smaller
-// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-3)
-// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-2)
-// barcolor(bullishValidation_VD ? color_bu_momentum : na, offset=-1)
-// barcolor(bullishValidation_VD ? color_bu_momentum : na)
-
 plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
 plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
 plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-3)
 plotshape(bullishValidation_VD, color=color_validation, style=shape.arrowup, location=location.belowbar, size=size.tiny)
 
 // validation - Bullish R<E
-// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-3)
-// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-2)
-// barcolor(bearishValidation_VD ? color_be_momentum : na, offset=-1)
-// barcolor(bearishValidation_VD ? color_be_momentum : na)
-
+// 3 bars
 plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
 plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
 plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-3)
 plotshape(bearishValidation_VD, color=color_validation, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
 
-
-// divergence - R<E
-// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na, offset=-2)
-// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na, offset=-1)
-// barcolor(bearishDivergence_VI or bullishDivergence_VI ? color_divergence : na)
-
+// 3 bars - divergence - R<E
 plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
 plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
 plotshape(bullishDivergence_VI, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny)
-
-
 plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
 plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
 plotshape(bearishDivergence_VI, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
 
-plotshape(bullishDivergence_VD, color=color.yellow, style=shape.arrowup, location=location.belowbar, size=size.tiny)
-plotshape(bearishDivergence_VD, color=color.yellow, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+plotshape(bearishDivergence_VD2, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
+plotshape(bearishDivergence_VD2, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
+plotshape(bearishDivergence_VD2, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+plotshape(bullishDivergence_VD2, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
+plotshape(bullishDivergence_VD2, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
+plotshape(bullishDivergence_VD2, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny)
 
+// 1 bar - divergence - R < E
+plotshape(bullishDivergence_VI2 or bullishDivergence_VI3, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+plotshape(bearishDivergence_VI2 or bearishDivergence_VI3, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
+
+// 1 bar
+plotshape(bullishDivergence_VD, color=color_divergence, style=shape.arrowup, location=location.belowbar, size=size.tiny)
+plotshape(bearishDivergence_VD, color=color_divergence, style=shape.arrowdown, location=location.abovebar, size=size.tiny)
