@@ -5,17 +5,20 @@ study("Crypto - Price Action Bars", overlay=true)
 sdj                   = input(true, title="Show Doji?", group="Neutral Bar/Zone")
 sgtb                  = input(true, title="Show Gap?", group="Neutral Bar/Zone")
 sst                   = input(true, title="Show Spinning Top?", group="Neutral Bar/Zone")
-// spb                   = input(true, title="Show Pinbar?")
+soo                   = input(true, title="Show OO?", group="Neutral Bar/Zone")
+sioi                  = input(true, title="Show IOI?", group="Neutral Bar/Zone")
 smld                  = input(true, title="Show Momentum Slow Down?", group="Momentum")
 smsu                  = input(true, title="Show Momentum Speed Up?", group="Momentum")
 smp                   = input(true, title="Show Momentum Pause?", group="Momentum")
 stz                   = input(true, title="Show Tweezer Top/Bottom?", group="Reversal Bars")
 skgr                  = input(true, title="Show Kangaroo Tail?", group="Trend Continuation")
+stb                   = input(true, title="Show Trend Bar?", group="Trend Continuation")
 sfk                   = input(true, title="Show Fakey. Inside bar false-break?", group="False Breakout Bars")
 sfb                   = input(true, title="Show False Breakout. Congestion false-break?", group="False Breakout Bars")
+snsd                  = input(true, title="Show No Supply/Demand Bars?", group="Reversal Bars")
 senf                  = input(true, title="Show Engulfing. V-Shaped Reversal?", group="Reversal Bars")
-sms                   = input(true, title="Show Morning/Evening Star?", group="Reversal Bars")
-shk                   = input(true, title="Show Hikkake Pattern?", group="Reversal Bars")
+seb                   = input(true, title="Show Exhausted Bar?", group="Reversal Bars")
+shk                   = input(true, title="Show Hikkake Pattern?", group="Trapped Traders")
 srft                  = input(true, title="Show Rising/Failing Three?", group="Trend Continuation")
 siz                   = input(true, title="Show Indecision Zone Break out?", group="Neutral Bar/Zone", tooltip="Child bars oscillate inside mother's wick")
 sbt                   = input(true, title="Show Broadening Triangle?", group="Triangle")
@@ -23,6 +26,7 @@ sstr                  = input(true, title="Show Symmetrical Triangle?", group="T
 sss                   = input(true, title="Show Stair Step?", group="Neutral Bar/Zone")
 sib                   = input(true, title="Show Coiling Inside bars Break out?", group="Congestion Zone Breakout")
 scz                   = input(true, title="Show Congestion Zone?", group="Congestion Bars")
+snr7                  = input(true, title="Show NR7?", group="Congestion Bars")
 s3br                  = input(true, title="Show Three Bar Reversal?", group="Reversal Bars")
 spi                   = input(true, title="Show Pressure Increase?", group="Momentum", tooltip="Wick's getting longer")
 spz                   = input(true, title="Show Pressure Zone?", group="Momentum", tooltip="Traders hoping to identify a short-term move in the market's direction")
@@ -41,7 +45,6 @@ color_bu_momentum     = input(color.lime, "Color Bullish Momentum")
 color_reverse         = input(color.purple, "Color Reverse")
 color_pinbar          = input(color.silver, "Color Pinbar")
 color_breakout        = input(color.yellow, "Color Break out")
-color_continuation    = input(color.blue, "Color Continuation")
 
 //Volume Average
 emaVol25 = ema(volume, 25)
@@ -169,6 +172,8 @@ f_isHighest(highest_index, start_index, end_index) =>
 [secondPreviousBarIsHighestHigh] = f_isHighest(2, 3, pivotlbar + 3)
 [firstPreviousBarIsLowestLow]    = f_isLowest(1, 2, pivotlbar + 2)
 [secondPreviousBarIsLowestLow]   = f_isLowest(2, 3, pivotlbar + 3)
+[thirdPreviousBarIsHighestLow]    = f_isHighest(3, 4, pivotlbar + 4)
+[thirdPreviousBarIsLowestLow]   = f_isLowest(3, 4, pivotlbar + 4)
 
 highestBarCheck() => highestbars(high, pivotlbar) == 0 ? 1 : 0
 lowestBarCheck()  => lowestbars(low, pivotlbar) == 0 ? 1 : 0
@@ -245,7 +250,7 @@ if (not isDojiBody or (hasUpShadow and hasDnShadow)) and blackBody
 if abs(high-high[1]) <= spreadAvg*0.05
     twTop_deviant := true
 
-if volume > volume[1]
+if volume[1] > emaVol25 or volume > emaVol25 or volume > volume[1]
     twTop_volume := true   
 
 if firstPreviousBarIsHighestHigh or highestBarCheck() 
@@ -269,13 +274,102 @@ if (not isDojiBody or (hasUpShadow and hasDnShadow)) and whiteBody
 if abs(low-low[1]) <= spreadAvg*0.05
     twBottom_deviant := true
 
-if volume > volume[1]
+if volume[1] > emaVol25 or volume > emaVol25 or volume > volume[1]
     twBottom_volume := true   
 
 if firstPreviousBarIsLowestLow or lowestBarCheck() 
     twBottom_hl := true
 
 twBottom() => stz and twBottom_secondBar and twBottom_firstBar and twBottom_deviant and twBottom_hl and (twBottom_volume or close >= bodyMiddle[1])
+
+
+//=========================================================================|
+//                    EXHAUSTED BAR                                        | 
+//=========================================================================|
+bool bottomExhausted_2         = false
+bool bottomExhausted_1         = false
+bool bottomExhausted_0         = false
+bool bottomExhausted_volume    = false
+
+if close[2] < open[2]
+    bottomExhausted_2 := true
+
+if close[1] < open[1] and spread[1] > spreadAvg and averageSpreadTaken[1]
+    bottomExhausted_1 := true
+
+if close > open and open < close[1] and close > bodyMiddle[1] and close <= open[1]
+    bottomExhausted_0 := true
+
+if volume < volume[1] and volume < emaVol25
+    bottomExhausted_volume := true   
+
+bottomExhausted() => seb and bottomExhausted_volume and bottomExhausted_0 and bottomExhausted_1 and bottomExhausted_2
+
+bool bottomExhausted2_1         = false
+bool bottomExhausted2_0         = false
+bool bottomExhausted2_volume    = false
+bool bottomExhausted2_spread    = false
+bool bottomExhausted2_hl        = false
+
+if close[1] < open[1] and close[1] < close[2]
+    bottomExhausted2_1 := true
+
+if close > open and open > close[1] and close > (bodyHigh[1] - bodyLow[1])*2/3 + bodyLow[1] and close <= high[1]
+    bottomExhausted2_0 := true
+
+if volume > emaVol25 or volume[1] > emaVol25
+    bottomExhausted2_volume := true   
+
+if spread[1] > spreadAvg and (averageSpreadTaken[1] or (upShadow[1] < dnShadow[1] and dnShadow[1] > averageTopWickSize))
+    bottomExhausted2_spread := true
+
+if  firstPreviousBarIsLowestLow or lowestBarCheck()
+    bottomExhausted2_hl := true 
+
+bottomExhausted2() => seb and bottomExhausted2_volume and bottomExhausted2_0 and bottomExhausted2_1 and bottomExhausted2_spread and bottomExhausted2_hl
+
+//-----
+bool topExhausted_2         = false
+bool topExhausted_1         = false
+bool topExhausted_0         = false
+bool topExhausted_volume    = false
+
+if close[2] > open[2]
+    topExhausted_2 := true
+
+if close[1] > open[1] and spread[1] > spreadAvg and averageSpreadTaken[1]
+    topExhausted_1 := true
+
+if close < open and open > close[1] and close < bodyMiddle[1] and close >= open[1]
+    topExhausted_0 := true
+
+if volume < volume[1] and volume < emaVol25
+    topExhausted_volume := true   
+
+topExhausted() => seb and topExhausted_volume and topExhausted_0 and topExhausted_1 and topExhausted_2
+
+bool topExhausted2_1         = false
+bool topExhausted2_0         = false
+bool topExhausted2_volume    = false
+bool topExhausted2_spread    = false
+bool topExhausted2_hl    = false
+
+if close[1] > open[1] and close[1] > close[2]
+    topExhausted2_1 := true
+
+if close < open and open < close[1] and close < (bodyHigh[1] - bodyLow[1])*2/3 + bodyLow[1] and close >= low[1] and spread > spreadAvg
+    topExhausted2_0 := true
+
+if volume > emaVol25 or volume[1] > emaVol25
+    topExhausted2_volume := true   
+
+if spread[1] > spreadAvg and (averageSpreadTaken[1] or (upShadow[1] > dnShadow[1] and upShadow[1] > averageTopWickSize))
+    topExhausted2_spread := true
+
+if firstPreviousBarIsHighestHigh or highestBarCheck()
+    topExhausted2_hl := true 
+
+topExhausted2() => seb and topExhausted2_volume and topExhausted2_0 and topExhausted2_1 and topExhausted2_spread and topExhausted2_hl
 
 //=========================================================================|
 //                    ADVANCE BLOCK/ STALLED PATTERN                       | 
@@ -352,6 +446,47 @@ if close < high[1] and spread <= spread[1] and range <= range[1] and smallBody
 bearishAD() => ssp and bearishAD_fourthBar and bearishAD_thirdBar and bearishAD_secondBar and bearishAD_firstBar
 
 //=========================================================================|
+//               REVERSE REJECTION/ INDECISION ZONE                        | 
+//=========================================================================|
+bool bearIZ_thirdBar       = false
+bool bearIZ_secondBar      = false
+bool bearIZ_firstBar       = false
+bool bearIZ_currentBar     = false
+
+if close[3] < open[3] and (dnShadow[3] > averageBottomWickSize or longBody[3]) and thirdPreviousBarIsLowestLow
+    bearIZ_thirdBar := true
+
+if close[2] <= open[2] and close[2] <= close[3] and close[2] > low[3] and high[2] < high[3]
+    bearIZ_secondBar := true
+
+if close[1] <= close[3] and close[1] > low[3] and low[1] > low[3] and high[1] < high[3]
+    bearIZ_firstBar := true
+
+if close < low[3] or (low < low[3] and close > low[1])
+    bearIZ_currentBar := true
+
+bearIZ() => siz and bearIZ_thirdBar and bearIZ_secondBar and bearIZ_firstBar and bearIZ_currentBar
+
+bool bullIZ_thirdBar       = false
+bool bullIZ_secondBar      = false
+bool bullIZ_firstBar       = false
+bool bullIZ_currentBar     = false
+
+if close[3] > open[3] and (upShadow[3] > averageTopWickSize or longBody[3]) and thirdPreviousBarIsHighestLow
+    bullIZ_thirdBar := true
+
+if close[2] >= open[2] and close[2] >= close[3] and close[2] < high[3] and low[2] > low[3]
+    bullIZ_secondBar := true
+
+if close[1] >= open[2] and close[1] < high[3] and high[1] < high[3] and low[1] > low[3]
+    bullIZ_firstBar := true
+
+if close > high[3] or (high > high[3] and close < high[1])
+    bullIZ_currentBar := true
+
+bullIZ() => siz and bullIZ_thirdBar and bullIZ_secondBar and bullIZ_firstBar and bullIZ_currentBar
+
+//=========================================================================|
 //               BROADENING TRIANGLE                                       | 
 //=========================================================================|
 bool broTriangle_firstBar      = false
@@ -366,90 +501,22 @@ if range > range[1] and high > high[1] and low < low[1]
 broadeningTriangle() => sbt and broTriangle_secondBar and broTriangle_firstBar  
 
 //=========================================================================|
-//               REVERSE REJECTION/ INDECISION ZONE                        | 
-//=========================================================================|
-bool bearIZ_fourthBar      = false
-bool bearIZ_thirdBar       = false
-bool bearIZ_secondBar      = false
-bool bearIZ_firstBar       = false
-bool bearIZ_currentBar     = false
-
-if close[3] < open[3] 
-    bearIZ_fourthBar := true 
-
-if close[3] < open[3] and (dnShadow[3] > averageBottomWickSize or longBody[3])
-    bearIZ_thirdBar := true
-
-if close[2] <= open[2] and close[2] <= close[3] and close[2] > low[3] and high[2] < high[3]
-    bearIZ_secondBar := true
-
-if close[1] <= close[3] and close[1] > low[3] and low[1] > low[3] and high[1] < high[3]
-    bearIZ_firstBar := true
-
-if close < close[3]
-    bearIZ_currentBar := true
-
-bearIZ() => siz and bearIZ_fourthBar and bearIZ_thirdBar and bearIZ_secondBar and bearIZ_firstBar
-
-bool bullIZ_fourthBar      = false
-bool bullIZ_thirdBar       = false
-bool bullIZ_secondBar      = false
-bool bullIZ_firstBar       = false
-bool bullIZ_currentBar     = false
-
-if close[3] > open[3] 
-    bullIZ_fourthBar := true 
-
-if close[3] > open[3] and (upShadow[3] > averageTopWickSize or longBody[3])
-    bullIZ_thirdBar := true
-
-if close[2] >= open[2] and close[2] >= close[3] and close[2] < high[3] and low[2] > low[3]
-    bullIZ_secondBar := true
-
-if close[1] >= open[2] and close[1] < high[3] and high[1] < high[3] and low[1] > low[3]
-    bullIZ_firstBar := true
-
-if close > open[3]
-    bullIZ_currentBar := true
-
-bullIZ() => siz and bullIZ_fourthBar and bullIZ_thirdBar and bullIZ_secondBar and bullIZ_firstBar 
-
-//=========================================================================|
 //                     SYMMETRICAL TRIANGLE                                | 
 //=========================================================================|
 bool symTriangle_firstBar       = false
 bool symTriangle_secondBar      = false
 bool symTriangle_thirdBar       = false
-bool symTriangle_fourthBar      = false
-
-if range[4] > rangeAvg or spread[4] > spreadAvg
-    symTriangle_firstBar := true
-
-if high[3] < high[4] and low[3] > low[4] 
-    symTriangle_secondBar := true
-
-if high[2] < high[3] and low[2] > low[4] and spread[2] < spreadAvg
-    symTriangle_thirdBar := true
-
-if high[1] < high[2] and low[1] > low[2] and spread[1] < spreadAvg 
-    symTriangle_fourthBar := true
-
-symmetricalTriangle() => sstr and symTriangle_firstBar and symTriangle_secondBar and symTriangle_thirdBar and symTriangle_fourthBar
-
-bool symTriangle2_firstBar       = false
-bool symTriangle2_secondBar      = false
-bool symTriangle2_thirdBar       = false
 
 if (range[2] > rangeAvg or spread[2] > spreadAvg) and not bigBody[2]
-    symTriangle2_firstBar := true
+    symTriangle_firstBar := true
 
 if high[1] < high[2] and low[1] > low[2] 
-    symTriangle2_secondBar := true
+    symTriangle_secondBar := true
 
 if high < high[1] and low > low[1] and close < high[1] and close > low[1] and spread < spreadAvg
-    symTriangle2_thirdBar := true
+    symTriangle_thirdBar := true
 
-symmetricalTriangle2() => sstr and symTriangle2_firstBar and symTriangle2_secondBar and symTriangle2_thirdBar
+symmetricalTriangle() => sstr and symTriangle_firstBar and symTriangle_secondBar and symTriangle_thirdBar
 
 //=========================================================================|
 //                     SYMMETRICAL TRIANGLE BREAKOUT                       | 
@@ -504,53 +571,28 @@ symTriangleBreakout2() => sstr and symBreakout2_firstBar and symBreakout2_second
 //=========================================================================|
 //                     RISING/FAILLING THREE                               | 
 //=========================================================================|
-// RISING
-// accept those above EMA25 and inside bar must become smaller and smaller
- 
-bool rising3_1  = false
-bool rising3_2  = false
-bool rising3_3  = false
-bool rising3_4  = false
-bool rising3_5  = false
-bool rising3_reverse           = false
-bool rising3_123RangeSmaller   = false
-bool rising3_123SpreadSmaller  = false
-bool rising3_123SpreadBigger   = false
+bool rising3_1       = false
+bool rising3_2       = false
+bool rising3_3       = false
+bool rising3_4       = false
+bool rising3_reverse = false
 
-if close[5] > open[5] and (spread[5] > spreadAvg or range[5] > rangeAvg)
-    rising3_1 := true 
-
-if close[4] < open[4] and close[4] > open[5] and close[4] < high[5] and range[4] < range[5] and spread[4] < spread[5]
-    rising3_2 := true
-
-if close[3] > low[5] and close[3] < high[5]
-    rising3_3 := true
-
-if close[2] > low[5] and close[2] < high[5]
+if close[4] > open[4] and spread[4] > spreadAvg
     rising3_4 := true
 
-if close[1] < open[1] and low[1] < low[5]
-    rising3_5 := true
+if  close[3] < open[3] and close[3] > open[4] and close[3] < high[4] and range[3] < range[4] and spread[3] < spread[4]
+    rising3_3 := true
 
-if range[3] > range[2] and range[2] > range[1]
-    rising3_123RangeSmaller := true
+if close[2] < high[4] and close[2] > low[4]
+    rising3_2 := true
 
-if spread[3] > spread[2] and spread[2] > spread[1]
-    rising3_123SpreadSmaller := true
+if close[1] < open[1] and low[1] < low[4]
+    rising3_1 := true
 
-if spread[3] < spread[2] and spread[2] < spread[1]
-    rising3_123SpreadBigger := true
-
-if close > open and lowAboveEMA25
+if (close > open and closeAboveEMA25 and lowBelowEMA25) or doji or dragonflyDoji or gravestoneDoji
     rising3_reverse := true
 
-if  rising3_123SpreadBigger or close[1] < low[5]
-    rising3_reverse := close > high[1] and low < low[1] and lowAboveEMA25
-
-if rising3_123RangeSmaller or rising3_123SpreadSmaller 
-    rising3_reverse := close > open[1] and lowAboveEMA25
-
-risingThree() => srft and rising3_1 and rising3_2 and rising3_3 and rising3_4 and rising3_5 and rising3_reverse 
+risingThree() => srft and rising3_1 and rising3_2 and rising3_3 and rising3_4 and rising3_reverse
 
 bool failling3_1       = false
 bool failling3_2       = false
@@ -570,11 +612,7 @@ if close[2] < high[4] and close[2] > low[4]
 if close[1] > open[1] and high[1] > high[4]
     failling3_4 := true
 
-dojiPause = spread < spreadAvg and range < rangeAvg and tinySpreadTaken and close < high[1] and close > low[1]
-if dojiPause and highBelowEMA25
-    failling3_reverse := true
-    
-if close < open and (close < open[1] or (high > high[1] and close < bodyMiddle[1]))
+if (close < open and closeBelowEMA25 and highAboveEMA25) or doji or gravestoneDoji
     failling3_reverse := true
 
 faillingThree() => srft and failling3_1 and failling3_2 and failling3_3 and failling3_4 and failling3_reverse
@@ -800,71 +838,6 @@ if close < open[1] and spreadTakenByDnShadow() and upShadow > averageTopWickSize
 blackEngulfing2() => senf and blackEng_third and blackEng_second and blackEng_first and blackEng_engulfing2 and highestBarCheck()
 
 //=========================================================================|
-//                     MORNING/EVENING STAR                                | 
-//=========================================================================|
-//morning
-bool morning_firstBar                = false
-bool morning_secondBar               = false
-bool morning_thirdBar                = false
-
-if close[2] < open[2] and averageSpreadTaken[2] and marubozuDnBar[2] and longBody
-    morning_firstBar := true
-
-if doji[1] or (hammer[1] and firstPreviousBarIsLowestLow) or bullishPinbar[1]
-    morning_secondBar := true
-
-if close > open and close > (open[2] + close[2])/2 and close > high[1] and marubozuUpBar
-    morning_thirdBar := true
-
-morningStar() => sms and morning_firstBar and morning_secondBar and morning_thirdBar
-
-bool morning2_firstBar               = false
-bool morning2_secondBar              = false
-bool morning2_thirdBar               = false
-
-if close[2] < open[2] and averageSpreadTaken[2] and spread[2] > spreadAvg and secondPreviousBarIsLowestLow
-    morning2_firstBar := true
-
-if doji[1] or hammer[1] or spinningTopWhite[1] or spinningTopBlack[1] or dragonflyDoji[1]
-    morning2_secondBar := true
-
-if close > open and close > open[2] and marubozuUpBar
-    morning2_thirdBar := true
-
-morningStar2() => sms and morning2_firstBar and morning2_secondBar and morning2_thirdBar
-
-// evening
-bool evening_firstBar               = false
-bool evening_secondBar              = false
-bool evening_thirdBar               = false
-
-if close[2] > open[2] and averageSpreadTaken[2] and marubozuUpBar[2] and longBody
-    evening_firstBar := true
-
-if doji[1] or (shootingStar[1] and firstPreviousBarIsHighestHigh) or bearishPinbar[1]
-    evening_secondBar := true
-
-if close < open and close < (open[2] + close[2])/2 and close < low[1] and marubozuDnBar
-    evening_thirdBar := true
-
-eveningStar() => sms and evening_firstBar and evening_secondBar and evening_thirdBar
-
-bool evening2_firstBar               = false
-bool evening2_secondBar              = false
-bool evening2_thirdBar               = false
-
-if close[2] < open[2] and averageSpreadTaken[2]  and spread[2] > spreadAvg and secondPreviousBarIsHighestHigh
-    evening2_firstBar := true
-
-if doji[1] or shootingStar[1] or spinningTopWhite[1] or spinningTopBlack[1] or gravestoneDoji[1]
-    evening2_secondBar := true
-
-if close > open and close < close[2] and marubozuDnBar
-    evening2_thirdBar := true
-
-eveningStar2() => sms and evening2_firstBar and evening2_secondBar and evening2_thirdBar
-
-//=========================================================================|
 //                     THREE BAR REVERSAL                                  | 
 //=========================================================================|
 // middle bar can't be outsidebar
@@ -900,6 +873,40 @@ if close < low[1] and close <= low[2]
 
 bearish3Reversal() => s3br and dnT3R_first and dnT3R_second and dnT3R_third
 
+
+//=========================================================================|
+//                     NO SUPPLY/DEMAND                                    | 
+//=========================================================================|
+bool noDemand_up                = false
+bool noDemand_down              = false
+bool noDemand_volume            = false
+
+if spread[1] > spreadAvg and close[1] > open[1] and upShadow > averageTopWickSize and highestBarCheck()
+    noDemand_up := true
+
+if close < open and high > high[1]
+    noDemand_down := true
+
+if volume > emaVol25 or volume[1] > emaVol25
+    noDemand_volume := true 
+
+noDemandBars() => snsd and noDemand_up and noDemand_down and noDemand_volume
+
+bool noSupply_down        = false
+bool noSupply_up          = false
+bool noSupply_volume      = false
+
+if spread[1] > spreadAvg and close[1] < open[1] and dnShadow > averageBottomWickSize and lowestBarCheck()
+    noSupply_down := true
+
+if close > open and low < low[1]
+    noSupply_up := true
+
+if volume > emaVol25 or volume[1] > emaVol25
+    noSupply_volume := true 
+
+noSupplyBars() => snsd and noSupply_down and noSupply_up and noSupply_volume
+
 //=========================================================================|
 //                   DECELERATION                                          | 
 //=========================================================================|
@@ -909,7 +916,7 @@ bool dnDec_thirdBar     = false
 bool dnDec_fourthBar    = false
 [isProjectionGettingSmaller] = f_isProjectionGettingSmaller()
 
-if close[3] < open[3] 
+if close[3] < open[3] and spread[3] > spreadAvg 
     dnDec_fourthBar := true 
 
 if close[2] < open[2] and low[2] < low[3]
@@ -928,7 +935,7 @@ bool upDec_secondBar    = false
 bool upDec_thirdBar     = false
 bool upDec_fourthBar    = false
 
-if close[3] > open[3] 
+if close[3] > open[3] and spread[3] > spreadAvg 
     upDec_fourthBar := true 
 
 if close[2] > open[2] and high[2] > high[3]
@@ -949,6 +956,9 @@ bool upAC_firstBar     = false
 bool upAC_secondBar    = false
 bool upAC_thirdBar     = false
 bool upAC_fourthBar    = false
+bool upAC_volume       = false
+bool upAC_shadow       = false
+
 [upLastProjectionIsBiggest] = f_upLastProjectionIsBiggest()
 
 if close[3] > open[3] 
@@ -963,12 +973,21 @@ if close[1] > open[1] and high[1] > high[2]
 if high > high[1]
     upAC_firstBar := true 
 
-buyingAC() => sac and upAC_fourthBar and upAC_thirdBar and upAC_secondBar and upAC_firstBar and upLastProjectionIsBiggest
+if volume[3] > emaVol25 or volume[2] > emaVol25 or volume[1] > emaVol25 or volume > emaVol25
+    upAC_volume := true
+
+if upShadow[1] > averageTopWickSize or upShadow > averageTopWickSize
+    upAC_shadow := true
+
+buyingAC() => sac and upAC_fourthBar and upAC_thirdBar and upAC_secondBar and upAC_firstBar and upAC_volume and upLastProjectionIsBiggest and upAC_shadow
 
 bool dnAC_firstBar     = false
 bool dnAC_secondBar    = false
 bool dnAC_thirdBar     = false
 bool dnAC_fourthBar    = false
+bool dnAC_volume       = false
+bool dnAC_shadow       = false
+
 [dnLastProjectionIsBiggest] = f_dnLastProjectionIsBiggest()
 
 if close[3] < open[3] 
@@ -983,7 +1002,13 @@ if close[1] < open[1] and low[1] < low[2]
 if low < low[1]
     dnAC_firstBar := true 
 
-sellingAC() => sac and dnAC_fourthBar and dnAC_thirdBar and dnAC_secondBar and dnAC_firstBar and dnLastProjectionIsBiggest
+if volume[3] > emaVol25 or volume[2] > emaVol25 or volume[1] > emaVol25 or volume > emaVol25
+    dnAC_volume := true
+
+if dnShadow[1] > averageBottomWickSize or dnShadow > averageBottomWickSize
+    dnAC_shadow := true
+
+sellingAC() => sac and dnAC_fourthBar and dnAC_thirdBar and dnAC_secondBar and dnAC_firstBar and dnAC_volume and dnLastProjectionIsBiggest and dnAC_shadow
 
 //=========================================================================|
 //                     PRESSURE INCREASE                                   | 
@@ -993,6 +1018,7 @@ bool buyingPI_firstBar        = false
 bool buyingPI_secondBar       = false
 bool buyingPI_thirdBar        = false
 bool buyingPI_closeAbove      = false
+bool buyingPI_volume          = false
 
 if close[2] < open[2] and dnShadow[2] > dnShadow[3] and low[2] < low[3]
     buyingPI_thirdBar := true 
@@ -1009,13 +1035,17 @@ if close[3] > open[3]
 if close[3] < open[3] 
     buyingPI_closeAbove := close[2] < close[3]
 
-buyingPI() => spi and buyingPI_firstBar and buyingPI_secondBar and buyingPI_thirdBar and buyingPI_closeAbove and not closeAboveEMA25
+if volume[2] > emaVol25 or volume[1] > emaVol25 or volume > emaVol25
+    buyingPI_volume := true
+
+buyingPI() => spi and buyingPI_firstBar and buyingPI_secondBar and buyingPI_thirdBar and buyingPI_closeAbove and buyingPI_volume and not closeAboveEMA25
 
 // up shadow's getting longer
 bool sellingPI_firstBar        = false
 bool sellingPI_secondBar       = false
 bool sellingPI_thirdBar        = false
 bool sellingPI_closeAbove      = false
+bool sellingPI_volume          = false
 
 if close[2] > open[2] and upShadow[2] > upShadow[3] and high[2] > high[3]
     sellingPI_thirdBar := true 
@@ -1032,7 +1062,10 @@ if close[3] < open[3]
 if close[3] > open[3] 
     sellingPI_closeAbove := close[2] > close[3]
 
-sellingPI() => spi and sellingPI_firstBar and sellingPI_secondBar and sellingPI_thirdBar and sellingPI_closeAbove and not closeBelowEMA25
+if volume[2] > emaVol25 or volume[1] > emaVol25 or volume > emaVol25
+    sellingPI_volume := true
+
+sellingPI() => spi and sellingPI_firstBar and sellingPI_secondBar and sellingPI_thirdBar and sellingPI_closeAbove and sellingPI_volume and not closeBelowEMA25
 
 // down shadow's getting longer and up shadow's getting shorter
 bool buyingPI2_firstBar        = false
@@ -1048,7 +1081,7 @@ if close[1] < open[1] and dnShadow[1] > dnShadow[2] and upShadow[1] < upShadow[2
 if  dnShadow > dnShadow[1] and upShadow < upShadow[1]
     buyingPI2_firstBar := true
 
-buyingPI2() => spi and buyingPI2_firstBar and buyingPI2_secondBar and buyingPI2_thirdBar and not closeAboveEMA25
+buyingPI2() => spi and buyingPI2_firstBar and buyingPI2_secondBar and buyingPI2_thirdBar and buyingPI_volume and not closeAboveEMA25
 
 // up shadow's getting longer and down shadow's getting shorter
 bool sellingPI2_firstBar        = false
@@ -1064,7 +1097,7 @@ if close[1] > open[1] and upShadow[1] > upShadow[2] and dnShadow[1] < dnShadow[2
 if upShadow > upShadow[1] and dnShadow < dnShadow[1]
     sellingPI2_firstBar := true
 
-sellingPI2() => spi and sellingPI2_firstBar and sellingPI2_secondBar and sellingPI2_thirdBar and not closeBelowEMA25
+sellingPI2() => spi and sellingPI2_firstBar and sellingPI2_secondBar and sellingPI2_thirdBar and sellingPI_volume and not closeBelowEMA25
 
 //=========================================================================|
 //                     PRESSURE ZONE                                       | 
@@ -1144,9 +1177,9 @@ bool sellingFZ_1       = false
 bool sellingFZ_2       = false
 bool sellingFZ_3       = false
 bool sellingFZ_0       = false
+bool sellingFZ_shadow  = false
 
-[thirdPreviousBarIsHighestLow]    = f_isHighest(3, 4, pivotlbar + 4)
-if upShadow[3] > dnShadow[3] and upShadow[3] > averageTopWickSize and volume[3] > volume[4] and volume[3] > volume[5] and thirdPreviousBarIsHighestLow
+if upShadow[3] > dnShadow[3] and upShadow[3] > averageTopWickSize and thirdPreviousBarIsHighestLow
     sellingFZ_3 := true 
  
 if high[2] > bodyHigh[3] and close[2] <= bodyHigh[3] 
@@ -1158,7 +1191,10 @@ if high[1] > bodyHigh[3] and close[1] <= bodyHigh[3]
 if high > bodyHigh[3] and close <= bodyHigh[3]
     sellingFZ_0 := true 
 
-sellingFZ() => sfz and sellingFZ_0 and sellingFZ_1 and sellingFZ_2 and sellingFZ_3
+if upShadow[3] > averageTopWickSize*2 or upShadow[2] > averageTopWickSize*2 or upShadow[1] > averageTopWickSize*2 or upShadow > averageTopWickSize*2 
+    sellingFZ_shadow := true
+
+sellingFZ() => sfz and sellingFZ_0 and sellingFZ_1 and sellingFZ_2 and sellingFZ_3 and sellingFZ_shadow
 
 bool sellingFZ2_1       = false
 bool sellingFZ2_2       = false
@@ -1167,7 +1203,7 @@ bool sellingFZ2_4       = false
 bool sellingFZ2_0       = false
 
 [fourthPreviousBarIsHighestLow]    = f_isHighest(4, 5, pivotlbar + 5)
-if upShadow[4] > dnShadow[4] and upShadow[4] > averageTopWickSize and volume[4] > volume[5] and volume[4] > volume[6] and fourthPreviousBarIsHighestLow
+if upShadow[4] > dnShadow[4] and upShadow[4] > averageTopWickSize and fourthPreviousBarIsHighestLow
     sellingFZ2_4 := true 
  
 if high[3] > bodyHigh[4] and close[3] < (high[4] - bodyHigh[4])/2 + bodyHigh[4] 
@@ -1189,9 +1225,9 @@ bool buyingFZ_1       = false
 bool buyingFZ_2       = false
 bool buyingFZ_3       = false
 bool buyingFZ_0       = false
+bool buyingFZ_shadow  = false
 
-[thirdPreviousBarIsLowestLow]   = f_isLowest(3, 4, pivotlbar + 4)
-if upShadow[3] < dnShadow[3] and dnShadow[3] > averageBottomWickSize and volume[3] > volume[4] and volume[3] > volume[5] and thirdPreviousBarIsLowestLow
+if upShadow[3] < dnShadow[3] and dnShadow[3] > averageBottomWickSize and thirdPreviousBarIsLowestLow
     buyingFZ_3 := true 
  
 if low[2] < bodyLow[3] and close[2] >= bodyLow[3]
@@ -1203,7 +1239,10 @@ if low[1] < bodyLow[3] and close[1] >= bodyLow[3]
 if low < bodyLow[3] and close >= bodyLow[3]
     buyingFZ_0 := true 
 
-buyingFZ() => sfz and buyingFZ_0 and buyingFZ_1 and buyingFZ_2 and buyingFZ_3
+if dnShadow[3] > averageBottomWickSize*2 or dnShadow[2] > averageBottomWickSize*2 or dnShadow[1] > averageBottomWickSize*2 or dnShadow > averageBottomWickSize*2 
+    buyingFZ_shadow := true
+
+buyingFZ() => sfz and buyingFZ_0 and buyingFZ_1 and buyingFZ_2 and buyingFZ_3 and buyingFZ_shadow
 
 bool buyingFZ3_1       = false
 bool buyingFZ3_2       = false
@@ -1212,7 +1251,7 @@ bool buyingFZ3_4       = false
 bool buyingFZ3_0       = false
 
 [fourthPreviousBarIsLowestLow]   = f_isLowest(4, 5, pivotlbar + 5)
-if upShadow[4] < dnShadow[4] and dnShadow[4] > averageBottomWickSize and volume[4] > volume[5] and volume[4] > volume[6] and fourthPreviousBarIsLowestLow
+if upShadow[4] < dnShadow[4] and dnShadow[4] > averageBottomWickSize and fourthPreviousBarIsLowestLow
     buyingFZ3_4 := true 
  
 if low[3] < bodyLow[4] and close[3] > bodyLow[4] - ((bodyLow[4] - low[4])/2)
@@ -1253,6 +1292,18 @@ congestionZone_5()     => close[5] <= high[6] and close[5] >= low[6]   ? 1 : 0
 congZoneBreakout8  = scz and congestionZone_8pi() and congestionZone_7() and congestionZone_6() and congestionZone_5() and congestionZone_4() and congestionZone_3() and congestionZone_2() and congestionZone_1() and congestionZone_0br() 
 
 //=========================================================================|
+//                     NR7                                                 | 
+//=========================================================================|
+nr7_5()   =>  close[5] < high[6] and close[5] > low[6] ? 1 : 0
+nr7_4()   =>  close[4] < high[5] and close[4] > low[5] ? 1 : 0
+nr7_3()   =>  close[3] < high[4] and close[3] > low[4] ? 1 : 0
+nr7_2()   =>  close[2] < high[3] and close[2] > low[3] ? 1 : 0
+nr7_1()   =>  close[1] < high[2] and close[1] > low[2] ? 1 : 0
+nr7_0()   =>  range < range[6] and range < range[5] and range < range[4] and range < range[3] and range < range[2] and range < range[1] ? 1 : 0
+
+nr7 = snr7 and nr7_5() and nr7_4() and nr7_3() and nr7_2() and nr7_1() and nr7_0() 
+
+//=========================================================================|
 //                     FALSE BREAKOUT                                      | 
 //=========================================================================|
 bearTrap_trapBar()      => close[1] < open[1] and volume[1] < emaVol25  ? 1 : 0
@@ -1268,42 +1319,21 @@ bullTrap  = sfb and bullTrap_trapBar() and bullTrap_reverseBar()
 //=========================================================================|
 //                     STAIR STEP                                          | 
 //=========================================================================|
-// red - green - red - green - ?
-upSS_4()     => close[4] < open[4]                                               ? 1 : 0
-upSS_3()     => close[3] > open[3] and open[3] > close[4] and close[3] > open[4] ? 1 : 0
-upSS_2()     => close[2] < open[2] and open[2] > close[3] and close[2] > open[3] ? 1 : 0
-upSS_1()     => close[1] > open[1] and open[1] > close[2] and close[1] > open[2] ? 1 : 0
-upSS_0()     => high > high[1] or open > close[1]                                ? 1 : 0
-
-upStairStep = sss and upSS_4() and upSS_3() and upSS_2() and upSS_1() and upSS_0()
-
 // green - red - green - red - ?
-dnSS_4()     => close[4] > open[4]                                               ? 1 : 0
-dnSS_3()     => close[3] < open[3] and open[3] > close[4] and close[3] > open[4] ? 1 : 0
-dnSS_2()     => close[2] > open[2] and open[2] > close[3] and close[2] > open[3] ? 1 : 0
-dnSS_1()     => close[1] < open[1] and open[1] > close[2] and close[1] > open[2] ? 1 : 0
-dnSS_0()     => low < low[1] or open < close[1]                                  ? 1 : 0
+upSS_3()     => close[3] > open[3] and averageSpreadTaken[3]  ? 1 : 0
+upSS_2()     => close[2] < open[2] and averageSpreadTaken[2]  ? 1 : 0
+upSS_1()     => close[1] > open[1] and averageSpreadTaken[1]  ? 1 : 0
+upSS_0()     => close < open and averageSpreadTaken           ? 1 : 0
 
-dnStairStep = sss and dnSS_4() and dnSS_3() and dnSS_2() and dnSS_1() and dnSS_0()
+upStairStep = sss and upSS_3() and upSS_2() and upSS_1() and upSS_0()
 
-// SS false break
-// green - red - green - red(false break) - green(reverse)
-upSSFB_4()     => close[4] > open[4]                                               ? 1 : 0
-upSSFB_3()     => close[3] < open[3] and open[3] > close[4] and close[3] > open[4] ? 1 : 0
-upSSFB_2()     => close[2] > open[2] and open[2] > close[3] and close[2] > open[3] ? 1 : 0
-upSSFB_1()     => close[1] < open[1] and close[1] < open[2]                       ? 1 : 0
-upSSFB_0()     => close > open and close > high[1]                                 ? 1 : 0
+// red - green - red - green - ?
+dnSS_3()     => close[3] < open[3] and averageSpreadTaken[3] ? 1 : 0
+dnSS_2()     => close[2] > open[2] and averageSpreadTaken[2] ? 1 : 0
+dnSS_1()     => close[1] < open[1] and averageSpreadTaken[1] ? 1 : 0
+dnSS_0()     => close > open and averageSpreadTaken          ? 1 : 0
 
-upStairStepFalseBreak = sss and upSSFB_4() and upSSFB_3() and upSSFB_2() and upSSFB_1() and upSSFB_0()
-
-// red - green - red - green(false break) - red(reverse)
-dnSSFB_4()     => close[4] < open[4]                                               ? 1 : 0
-dnSSFB_3()     => close[3] > open[3] and open[3] > close[4] and close[3] > open[4] ? 1 : 0
-dnSSFB_2()     => close[2] < open[2] and open[2] > close[3] and close[2] > open[3] ? 1 : 0
-dnSSFB_1()     => close[1] > open[1] and close[1] > open[2]                        ? 1 : 0
-dnSSFB_0()     => close < open and close < low[1]                                  ? 1 : 0
-
-dnStairStepFalseBreak = sss and dnSSFB_4() and dnSSFB_3() and dnSSFB_2() and dnSSFB_1() and dnSSFB_0()
+dnStairStep = sss and dnSS_3() and dnSS_2() and dnSS_1() and dnSS_0()
 
 //=========================================================================|
 //                     MOMENTUM SLOW DOWN                                  | 
@@ -1345,18 +1375,57 @@ buyingSU = smsu and buyingSU_3() and buyingSU_2() and buyingSU_1() and buyingSU_
 bullMP_4()     => close[4] > open[4]  ? 1 : 0
 bullMP_3()     => low[3] > low[4] and high[3] > high[4] ? 1 : 0
 bullMP_2()     => low[2] > low[3] and high[2] > high[3] ? 1 : 0
-bullMP_1()     => low[1] > low[2] and high[1] > high[2] ? 1 : 0
-bullMP_pause()   => close <= low[1] and low < low[1] ? 1 : 0
+bullMP_1()     => close[1] > open[1] and low[1] > low[2] and high[1] > high[2] ? 1 : 0
+bullMP_pause() => close <= low[1] and low < low[1] ? 1 : 0
 
 bullMP = smp and bullMP_4() and bullMP_3() and bullMP_2() and bullMP_1() and bullMP_pause() and closeAboveEMA25
 
 bearMP_4()     => close[4] < open[4]  ? 1 : 0
 bearMP_3()     => low[3] < low[4] and high[3] < high[4] ? 1 : 0
 bearMP_2()     => low[2] < low[3] and high[2] < high[3] ? 1 : 0
-bearMP_1()     => low[1] < low[2] and high[1] < high[2] ? 1 : 0
-bearMP_pause()   => close >= high[1] and high > high[1] ? 1 : 0
+bearMP_1()     => close[1] < open[1] and low[1] < low[2] and high[1] < high[2] ? 1 : 0
+bearMP_pause() => close >= high[1] and high > high[1] ? 1 : 0
 
 bearMP = smp and bearMP_4() and bearMP_3() and bearMP_2() and bearMP_1() and bearMP_pause() and closeBelowEMA25
+
+//=========================================================================|
+//                    TREND BAR                                            | 
+//=========================================================================|
+bullTB_2()     => close[2] > open[2] and averageSpreadTaken[2] ? 1 : 0
+bullTB_1()     => close[1] > open[1] and close[1] >= close[2] and averageSpreadTaken[1] ? 1 : 0
+bullTB_0()     => close > open and close >= close[1] and averageSpreadTaken ? 1 : 0
+
+bullTB = stb and bullTB_2() and bullTB_1() and bullTB_0()
+
+bearTB_3()     => close[2] < open[2] and averageSpreadTaken[2] ? 1 : 0
+bearTB_2()     => close[1] < open[1] and close[1] <= close[2] and averageSpreadTaken[1] ? 1 : 0
+bearTB_1()     => close < open and close <= close[1] and averageSpreadTaken ? 1 : 0
+
+bearTB = stb and bearTB_3() and bearTB_2() and bearTB_1() 
+
+//=========================================================================|
+//                    OO                                                   | 
+//=========================================================================|
+// green - red
+OO_1()  => close[1] > high[2] and low[1] < low[2] ? 1 : 0
+OO_0()  => high > high[1] and close < low[1] ? 1 : 0
+
+OO = soo and OO_1() and OO_0()
+
+// red - green
+OO1_1()  => high[1] > high[2] and close[1] < low[2] ? 1 : 0
+OO1_0()  => close > high[1] and low < low[1] ? 1 : 0
+
+OO1 = soo and OO1_1() and OO1_0()
+
+//=========================================================================|
+//                    IOI                                                  | 
+//=========================================================================|
+IOI_2()  => close[2] < close[3] and close[2] > open[3] ? 1 : 0
+IOI_1()  => (close[1] > high[2] and low[1] < low[2]) or (high[1] > high[2] and close[1] < low[2]) ? 1 : 0
+IOI_0()  => close < close[1] and close > open[1] ? 1 : 0
+
+IOI = sioi and IOI_2() and IOI_1() and IOI_0()
 
 //=========================================================================|
 //                    HIKKAKE PATTERN                                      | 
@@ -1423,21 +1492,21 @@ bearGapContinuation_volume()    => volume[1] < emaVol25 and (volume > volume[1] 
 bearGapContinuation = sgtb and bearGapContinuation_firstBar() and bearGapContinuation_gap() and bearGapContinuation_volume() 
 
 // gap at extreme
-bullGapReverse_firstBar()  => close[1] > open[1] and (spread[1] > spreadAvg or range[1] > rangeAvg)         ? 1 : 0
-bullGapReverse_gap()       => open > close[1] and close > open and close > high[1]                          ? 1 : 0
-bullGapReverse_wick()      => upShadow > dnShadow and highestBarCheck()                                     ? 1 : 0
-bullGapReverse_volume()    => volume[1] > emaVol25 or volume > emaVol25                                     ? 1 : 0
-bullGapReverse_position()  => closeAboveEMA200 and closeAboveEMA25                                          ? 1 : 0
+bullGapExtreme_firstBar()  => close[1] > open[1] and (spread[1] > spreadAvg or range[1] > rangeAvg)         ? 1 : 0
+bullGapExtreme_gap()       => open > close[1] and close > open and close > high[1] and not marubozuUpBar    ? 1 : 0
+bullGapExtreme_wick()      => upShadow > dnShadow and highestBarCheck() and upShadow > averageTopWickSize   ? 1 : 0
+bullGapExtreme_volume()    => volume > volume[1] and volume > emaVol25                                      ? 1 : 0
+bullGapExtreme_position()  => closeAboveEMA25                                                               ? 1 : 0
 
-bullGapReverse = sgtb and bullGapReverse_firstBar() and bullGapReverse_gap() and bullGapReverse_wick() and bullGapReverse_volume() and bullGapReverse_position()
+bullGapExtreme = sgtb and bullGapExtreme_firstBar() and bullGapExtreme_gap() and bullGapExtreme_wick() and bullGapExtreme_volume() and bullGapExtreme_position()
 
-bearGapReverse_firstBar()  => close[1] < open[1] and (spread[1] > spreadAvg or range[1] > rangeAvg)           ? 1 : 0
-bearGapReverse_gap()       => open < close[1] and close < open                                                ? 1 : 0
-bearGapReverse_wick()      => dnShadow > upShadow and lowestBarCheck()                                        ? 1 : 0
-bearGapReverse_volume()    => volume[1] > emaVol25 or volume > emaVol25                                       ? 1 : 0
-bearGapReverse_position()  => closeBelowEMA200 and closeBelowEMA25                                            ? 1 : 0
+bearGapExtreme_firstBar()  => close[1] < open[1] and (spread[1] > spreadAvg or range[1] > rangeAvg)           ? 1 : 0
+bearGapExtreme_gap()       => open < close[1] and close < open and not marubozuDnBar                                                ? 1 : 0
+bearGapExtreme_wick()      => dnShadow > upShadow and lowestBarCheck() and dnShadow > averageTopWickSize      ? 1 : 0
+bearGapExtreme_volume()    => volume > volume[1] and volume > emaVol25                                        ? 1 : 0
+bearGapExtreme_position()  => closeBelowEMA25                                                                 ? 1 : 0
 
-bearGapReverse = sgtb and bearGapReverse_firstBar() and bearGapReverse_gap() and bearGapReverse_wick() and bearGapReverse_volume() and bearGapReverse_position()
+bearGapExtreme = sgtb and bearGapExtreme_firstBar() and bearGapExtreme_gap() and bearGapExtreme_wick() and bearGapExtreme_volume() and bearGapExtreme_position()
 
 //=====================================================================================================================================================|
 patternLabelPosLow = low - (atr(30) * 0.6)
@@ -1448,12 +1517,13 @@ labelStyle = close > open ? label.style_label_up : label.style_label_down
 // Inside bars break out
 barcolor((grg or ggr or grr or rgr or rgg or rrg) and (close > high[1] or close < low[1]) ? color_breakout : na)
 
+// Exhausted bar
+barcolor(bottomExhausted() or topExhausted() or bottomExhausted2() or topExhausted2() ? color_reverse : na)
+
 // Gap
 // barcolor(bearGap or bullGap ? color_breakout : na)
 
 //Forbidden zone 
-// barcolor(sellingFZ() or buyingFZ() ? color_breakout : na, offset=-3)
-// barcolor(sellingFZ2() or buyingFZ2() ? color_breakout : na, offset=-4)
 if sellingFZ()
     line.new(x1 = bar_index[3], y1 = bodyHigh[3], x2 = bar_index, y2 = bodyHigh[3], color = color.orange, style = line.style_solid)
     line.new(x1 = bar_index[3], y1 = high[3], x2 = bar_index, y2 = high[3], color = color.orange, style = line.style_solid)
@@ -1465,8 +1535,8 @@ if sellingFZ2()
     line.new(x1 = bar_index[4], y1 = high[4], x2 = bar_index, y2 = high[4], color = color.orange, style = line.style_solid)
     line.new(x1 = bar_index[4], y1 = bodyHigh[4], x2 = bar_index[4], y2 = high[4], color = color.orange, style = line.style_solid)
     line.new(x1 = bar_index, y1 = bodyHigh[4], x2 = bar_index, y2 = high[4], color = color.orange, style = line.style_solid)
-
-
+    var ttSFZ = "Forbidden zone. Many attempted to break this zone but failed. They might still be stuck there"
+    label.new(bar_index, patternLabelPosHigh, text="FZ", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttSFZ)
 
 if buyingFZ()
     line.new(x1 = bar_index[3], y1 = bodyLow[3], x2 = bar_index, y2 = bodyLow[3], color = color.orange, style = line.style_solid)
@@ -1479,31 +1549,30 @@ if buyingFZ2()
     line.new(x1 = bar_index[4], y1 = low[4], x2 = bar_index, y2 = low[4], color = color.orange, style = line.style_solid)
     line.new(x1 = bar_index[4], y1 = bodyLow[4], x2 = bar_index[4], y2 = low[4], color = color.orange, style = line.style_solid)
     line.new(x1 = bar_index, y1 = bodyLow[4], x2 = bar_index, y2 = low[4], color = color.orange, style = line.style_solid)
-
-    // box.new(bar_index[4], bodyLow[4], bar_index, low[4], border_color = na, bgcolor = color.silver)
+    var ttBFZ = "Forbidden zone. Many attempted to break this zone but failed. They might still be stuck there"
+    label.new(bar_index, patternLabelPosLow, text="FZ", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttBFZ)
 
 // Congestion zone
 barcolor(congZoneBreakout4 or congZoneBreakout6 or congZoneBreakout8 ? color_breakout : na)
 
 // rising/failling three
-barcolor(risingThree() ? color_bu_momentum : na)
-barcolor(risingThree() ? color_be_momentum : na, offset=-1)
-barcolor(risingThree() ? color_be_momentum : na, offset=-2)
+barcolor(risingThree() or bullTB ? color_bu_momentum : na)
+barcolor(risingThree() or bearTB ? color_be_momentum : na, offset=-1)
+barcolor(risingThree() or bearTB ? color_be_momentum : na, offset=-2)
 barcolor(risingThree() ? color_be_momentum : na, offset=-3)
-barcolor(risingThree() ? color_be_momentum : na, offset=-4)
-barcolor(risingThree() ? color_bu_momentum : na, offset=-5)
+barcolor(risingThree() ? color_bu_momentum : na, offset=-4)
 
-barcolor(faillingThree() ? color_be_momentum : na)
-barcolor(faillingThree() ? color_bu_momentum : na, offset=-1)
-barcolor(faillingThree() ? color_bu_momentum : na, offset=-2)
+barcolor(faillingThree() or bearTB ? color_be_momentum : na)
+barcolor(faillingThree() or bullTB ? color_bu_momentum : na, offset=-1)
+barcolor(faillingThree() or bullTB ? color_bu_momentum : na, offset=-2)
 barcolor(faillingThree() ? color_bu_momentum : na, offset=-3)
 barcolor(faillingThree() ? color_be_momentum : na, offset=-4)
 
 //Triangle 
 barcolor(symTriangleBreakout1() or symTriangleBreakout2() ? color_breakout : na)
 
-// Morning/Evening Star + Engulfing
-barcolor(morningStar() or morningStar2() or eveningStar() or eveningStar2() or whiteEngulfing() or whiteEngulfing2() or blackEngulfing() or blackEngulfing2() ? color_reverse : na)
+// Engulfing
+barcolor(whiteEngulfing() or whiteEngulfing2() or blackEngulfing() or blackEngulfing2() or noSupplyBars() or noDemandBars() ? color_reverse : na)
 
 barcolor((congZoneBreakout4[1] or congZoneBreakout6[1] or congZoneBreakout8) and close > open and bearTrap ? color_reverse : na)
 barcolor((congZoneBreakout4[1] or congZoneBreakout6[1] or congZoneBreakout8) and close < open and bullTrap ? color_reverse : na)
@@ -1515,11 +1584,6 @@ barcolor(fakey_up1 or fakey_up2 or fakey_up3 or fakey_down1 or fakey_down2 or fa
 // barcolor(spb and (bullishPinbar or bearishPinbar) and closeInsidePreviousBar and range > range[1]*0.7 ? color_pinbar : na)
 
 //Stalled pattern + Advance block + Deceleration + Anti Climax
-// plotshape(bullishStalled() or bullishAD() or buyingDeceleration() or buyingAC(), color=color.lime, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-1)
-// plotshape(bullishStalled() or bullishAD() or buyingDeceleration() or buyingAC(), color=color.lime, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-2)
-// plotshape(bullishAD() or buyingDeceleration() or buyingAC(), color=color.lime, style=shape.arrowup, location=location.belowbar, size=size.tiny, offset=-3)
-// plotshape(bullishStalled() or bullishAD() or buyingDeceleration() or buyingAC(), color=color.maroon, style=shape.diamond, location=location.belowbar, size=size.tiny)
-
 if bullishAD()
     var ttADBottom = "An advance block is a fourth-period candlestick pattern considered to forecast a reversal"
     label.new(bar_index, patternLabelPosHigh, text="AD", style=label.style_label_down, color = color.blue, textcolor=color.white, tooltip = ttADBottom)
@@ -1531,11 +1595,6 @@ if buyingDeceleration()
 if buyingAC()
     var ttATTop = "A < B < C"
     label.new(bar_index, patternLabelPosHigh, text="AC", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttATTop)
-
-// plotshape(bearishStalled() or bearishAD() or sellingDeceleration() or sellingAC(), color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-1)
-// plotshape(bearishStalled() or bearishAD() or sellingDeceleration() or sellingAC(), color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-2)
-// plotshape(bearishAD() or sellingDeceleration() or sellingAC(), color=color.maroon, style=shape.arrowdown, location=location.abovebar, size=size.tiny, offset=-3)
-// plotshape(bearishStalled() or bearishAD() or sellingDeceleration() or sellingAC(), color=color.lime, style=shape.diamond, location=location.abovebar, size=size.tiny)
 
 if bearishAD()
     var ttADTop = "An advance block is a fourth-period candlestick pattern considered to forecast a reversal"
@@ -1569,12 +1628,12 @@ if buyingMSD
 
 // Momentum Speed up
 if buyingSU
-    var ttSMSU = "Bearish momentum speed up"
-    label.new(bar_index, patternLabelPosLow, text="SSU", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttSMSU)
+    var ttSMSU = "Bullish momentum speed up"
+    label.new(bar_index, patternLabelPosLow, text="BSU", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttSMSU)
 
 if sellingSU
-    var ttBMSU = "Bullish momentum speed up"
-    label.new(bar_index, patternLabelPosHigh, text="BSU", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttBMSU)
+    var ttBMSU = "Bearish momentum speed up"
+    label.new(bar_index, patternLabelPosHigh, text="SSU", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttBMSU)
 
 // Momentum Pause
 if bullMP
@@ -1594,7 +1653,7 @@ if twBottom()
     var ttBullishTweezerBottom = "Tweezer Bottom\nTweezer Bottom is a two-candle pattern that signifies a potential bullish reversal. The pattern is found during a downtrend. The first candle is long and red, the second candle is green, its lows nearly identical to the low of the previous candle. The virtually identical lows together with the inverted directions hint that bulls might be taking over the market."
     label.new(bar_index, patternLabelPosLow, text="TB", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttBullishTweezerBottom)
 
-// Tweezer Top/Bottom
+// Hikkake
 if bearHK or bearHK
     var ttTHK = "The hikkake pattern is a complex bar or candle pattern that begins to move in one direction but reverses quickly and is said to establish a forecast for a move in the opposite direction"
     label.new(bar_index, patternLabelPosHigh, text="HK", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttTHK)
@@ -1604,11 +1663,11 @@ if bullHK or bullHK2
     label.new(bar_index, patternLabelPosLow, text="HK", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttBHK)
 
 // Spinning Top
-if sst and spinningTopWhite and (volume > volume[1] or volume > emaVol25)
+if sst and spinningTopWhite and (volume > emaVol25 or volume > volume[1]) and (highestBarCheck() or lowestBarCheck())
     var ttSTW = "The candlestick pattern represents indecision about the future direction of the asset. It means that neither buyers nor sellers could gain the upper hand"
     label.new(bar_index, patternLabelPosHigh, text="STW", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttSTW)
 
-if sst and spinningTopBlack and (volume > volume[1] or volume > emaVol25)
+if sst and spinningTopBlack and (volume > emaVol25 or volume > volume[1]) and (highestBarCheck() or lowestBarCheck())
     var ttSTB = "The candlestick pattern represents indecision about the future direction of the asset. It means that neither buyers nor sellers could gain the upper hand"
     label.new(bar_index, patternLabelPosLow, text="STB", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttSTB)
 
@@ -1622,11 +1681,11 @@ if bullGapContinuation
     label.new(bar_index, patternLabelPosLow, text="GC", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttSGC)
 
 // Gap at Extreme
-if bullGapReverse
+if bullGapExtreme
     var ttBGR = "Gap results in the price opening significantly higher or lower than the previous day’s closing price"
     label.new(bar_index, patternLabelPosHigh, text="GE", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttBGR)
 
-if bearGapReverse
+if bearGapExtreme
     var ttSGR = "Gap results in the price opening significantly higher or lower than the previous day’s closing price"
     label.new(bar_index, patternLabelPosLow, text="GE", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttSGR)
 
@@ -1649,11 +1708,11 @@ if buyingPI2()
 
 // Neutral
 // Symmetrical Triangle
-// if symmetricalTriangle() or symmetricalTriangle2()
+// if symmetricalTriangle()
 //     var ttST = "A symmetrical triangle is a chart pattern characterized by two converging trend lines connecting a series of sequential peaks and troughs. These trend lines should be converging at a roughly equal slope"
 //     label.new(bar_index, labelPosition, text="ST", style=labelStyle, color = color.gray, textcolor=color.white, tooltip = ttST)
 
-if symmetricalTriangle() or symmetricalTriangle2()
+if symmetricalTriangle()
     line.new(bar_index[2], high[2], bar_index, high, width = 2, color = color.orange)
     line.new(bar_index[2], low[2], bar_index, low, width = 2, color = color.orange)
 
@@ -1667,7 +1726,7 @@ if broadeningTriangle()
     line.new(bar_index[2], low[2], bar_index, low, width = 2, color = color.orange)
 
 // Doji
-if sdj and (doji or dragonflyDoji or gravestoneDoji) and (volume > volume[1] or volume > emaVol25)
+if sdj and (doji or dragonflyDoji or gravestoneDoji) and (volume > volume[1] or volume > emaVol25) 
     var ttDoji = "Doji\nWhen the open and close of a security are essentially equal to each other, a doji candle forms. The length of both upper and lower shadows may vary, causing the candlestick you are left with to either resemble a cross, an inverted cross, or a plus sign. Doji candles show the playout of buyer-seller indecision in a tug-of-war of sorts. As price moves either above or below the opening level during the session, the close is either at or near the opening level."
     label.new(bar_index, labelPosition, text="DJ", style=labelStyle, color = color.gray, textcolor=color.white, tooltip = ttDoji)
 
@@ -1682,16 +1741,24 @@ if bearIZ() or bullIZ()
     var ttIZ = "The IZ pattern that come about due to indecision candlesticks can provide hints to the direction price are likely to move in the long run."
     label.new(bar_index, labelPosition, text="IZB", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttIZ)
 
-//Stair step
-if upStairStepFalseBreak or dnStairStepFalseBreak
-    var ttSSFB = "Like the flag, the stair-step is going to occur after a sharp trend to the upside or downside"
-    label.new(bar_index, labelPosition, text="SSFB", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttSSFB)
+// NR7
+if nr7
+    var ttNR7 = "Smallest bar in last 7 bars"
+    label.new(bar_index, labelPosition, text="NR7", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttNR7)
 
+// OO
+if OO or OO1
+    var ttOO = "Consecutive Outside Bar"
+    label.new(bar_index, labelPosition, text="OO", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttOO)
 
+// IOI
+if IOI
+    var ttIOI = "IOI"
+    label.new(bar_index, labelPosition, text="IOI", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttIOI)
 
 // x = bar_index
 // y = low
-// txt = tostring(bodyLow[4] - ((bodyLow[4] - low)/2))
+// txt = tostring(ema25)
 // label.new(x, y, txt, color=color.red)
 
 // a = bar_index
