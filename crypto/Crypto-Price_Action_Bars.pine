@@ -5,7 +5,7 @@ study("Crypto - Price Action Bars", overlay=true)
 sdj                   = input(true, title="Show Doji?", group="Neutral Bar/Zone")
 sgtb                  = input(true, title="Show Gap?", group="Neutral Bar/Zone")
 sst                   = input(true, title="Show Spinning Top?", group="Neutral Bar/Zone")
-soo                   = input(true, title="Show OO?", group="Neutral Bar/Zone")
+soo                   = input(true, title="Show OO?", group="Breakout Mode")
 sioi                  = input(true, title="Show IOI?", group="Neutral Bar/Zone")
 smld                  = input(true, title="Show Momentum Slow Down?", group="Momentum")
 smsu                  = input(true, title="Show Momentum Speed Up?", group="Momentum")
@@ -1748,7 +1748,7 @@ if nr7
 
 // OO
 if OO or OO1
-    var ttOO = "Consecutive Outside Bar"
+    var ttOO = "Breakout Mode"
     label.new(bar_index, labelPosition, text="OO", style=labelStyle, color = color.orange, textcolor=color.white, tooltip = ttOO)
 
 // IOI
